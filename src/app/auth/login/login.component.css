@@ -1,0 +1,104 @@
+/* login.component.css */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f5f7fa;
+}
+
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  padding: 2rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 500px;
+  padding: 3rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.auth-card h1 {
+  font-size: 2.2rem;
+  text-align: center;
+  color: #2a5c99;
+  margin-bottom: 1rem;
+}
+
+.auth-card .subtitle {
+  font-size: 1.1rem;
+  text-align: center;
+  color: #666;
+  margin-bottom: 2.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.8rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 1.1rem;
+  margin-bottom: 0.8rem;
+  color: #444;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 1rem 1.2rem;
+  font-size: 1.1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.form-group input:focus {
+  border-color: #2a5c99;
+  box-shadow: 0 0 0 4px rgba(42, 92, 153, 0.2);
+}
+
+.btn.primary {
+  padding: 1.1rem;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+}
+
+/* Styles supplémentaires pour le login spécifiquement */
+.forgot-password {
+  display: block;
+  text-align: right;
+  margin-top: -0.5rem;
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+}
+
+.auth-divider {
+  margin: 2rem 0;
+  text-align: center;
+  position: relative;
+}
+
+.auth-divider span {
+  background: white;
+  padding: 0 1rem;
+  position: relative;
+  z-index: 1;
+  color: #777;
+}
+
+.auth-divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #eee;
+  z-index: 0;
+}

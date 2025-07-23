@@ -1,0 +1,32 @@
+:host {
+  display: block;
+  padding: 40px;
+  background-color: #e3f2fd;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+h2 {
+  color: #1565c0;
+  font-size: 28px;
+}
+
+p {
+  font-size: 18px;
+  color: #1976d2;
+}
+
+.agent-tasks {
+  margin-top: 30px;
+}
+
+.agent-tasks ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.agent-tasks li {
+  background-color: #bbdefb;
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 6px;
+}

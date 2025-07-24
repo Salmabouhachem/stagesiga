@@ -1,14 +1,106 @@
-<div class="dashboard-container">
-  <h1>Bienvenue, {{ adminName }} !</h1>
-  <p>Voici votre tableau de bord administrateur.</p>
+<div class="admin-container">
+  <!-- Navigation -->
+  <nav class="admin-navbar">
+    <ul>
+      <li [class.active]="currentSection === 'dashboard'" 
+          (click)="currentSection = 'dashboard'">
+        <i class="fas fa-tachometer-alt"></i> Tableau de bord
+      </li>
+      <li [class.active]="currentSection === 'demandes'" 
+          (click)="currentSection = 'demandes'">
+        <i class="fas fa-list"></i> Demandes clients
+      </li>
+      <li [class.active]="currentSection === 'devis'" 
+          (click)="currentSection = 'devis'">
+        <i class="fas fa-file-invoice"></i> Demandes de devis
+      </li>
+      <li (click)="logout()">
+        <i class="fas fa-sign-out-alt"></i> Déconnexion
+      </li>
+    </ul>
+  </nav>
 
-  <div class="card">
-    <h3>Gestion des utilisateurs</h3>
-    <button>Voir les utilisateurs</button>
-  </div>
+  <!-- Contenu principal -->
+  <div class="admin-content">
+    <!-- Tableau de bord -->
+    <section *ngIf="currentSection === 'dashboard'">
+      <h1>Bienvenue, {{ adminName }}</h1>
+      
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h3>Clients actifs</h3>
+          <p>{{ activeUsers }}</p>
+          <small *ngIf="activeUsers === 0">Aucun client</small>
+        </div>
+        
+        <div class="stat-card">
+          <h3>Demandes aujourd'hui</h3>
+          <p>{{ todayRequests }}</p>
+          <small *ngIf="todayRequests === 0">Aucune demande</small>
+        </div>
+        
+        <div class="stat-card">
+          <h3>Devis en attente</h3>
+          <p>{{ pendingQuotes }}</p>
+          <small *ngIf="pendingQuotes === 0">Aucun devis</small>
+        </div>
+      </div>
+    </section>
 
-  <div class="card">
-    <h3>Statistiques</h3>
-    <button>Voir les stats</button>
+    <!-- Demandes clients -->
+    <section *ngIf="currentSection === 'demandes'">
+      <h2>Historique des demandes</h2>
+      
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Client</th>
+              <th>Date</th>
+              <th>Statut</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let request of requests">
+              <td>#{{ request.id }}</td>
+              <td>{{ getClientName(request.client) }}</td>
+              <td>{{ request.date | date:'dd/MM/yyyy' }}</td>
+              <td>
+                <span [class]="'status-' + request.status">
+                  {{ request.status }}
+                </span>
+              </td>
+              <td>{{ request.description }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Demandes de devis -->
+    <section *ngIf="currentSection === 'devis'">
+      <h2>Demandes de devis en attente</h2>
+      
+      <div class="cards-container">
+        <div *ngFor="let quote of quotes" class="quote-card">
+          <div class="quote-header">
+            <h3>{{ getClientName(quote.client) }}</h3>
+            <span class="date">{{ quote.date | date:'dd/MM/yyyy' }}</span>
+          </div>
+          <p class="description">{{ quote.description }}</p>
+          <div class="quote-actions">
+            <button (click)="processQuote(quote.id)">
+              <i class="fas fa-check"></i> Marquer comme traité
+            </button>
+          </div>
+        </div>
+        
+        <div *ngIf="quotes.length === 0" class="no-data">
+          Aucun devis en attente
+        </div>
+      </div>
+    </section>
   </div>
 </div>

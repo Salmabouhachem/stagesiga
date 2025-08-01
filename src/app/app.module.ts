@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { AppRoutingModule } from './app.routes';
 import { AppComponent } from './app.component';
@@ -13,8 +13,12 @@ import { LoginComponent } from './auth/login/login.component';
 import { SignupComponent } from './auth/signup/signup.component';
 import { AdminDashboardComponent } from './admin/dashboard-admin/dashboard-admin.component';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-
-
+import{ClientDashboardComponent} from'./client/dashboard-client/dashboard-client.component';
+import { CommonModule } from '@angular/common';
+import { AgentDashboardComponent } from './agent/dashboard-agent/dashboard-agent.component';
+import { CentresListComponent } from './admin/centres/centres-list.component';
+import { UsersListComponent } from './admin/users/users-list.component';
+import { RouterModule } from '@angular/router';
 @NgModule({
   declarations: [
     AppComponent,
@@ -22,6 +26,10 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
     LoginComponent,
     SignupComponent,
     AdminDashboardComponent,
+    ClientDashboardComponent,
+    AgentDashboardComponent,
+    CentresListComponent,
+    UsersListComponent
 
   ],
   imports: [
@@ -32,7 +40,10 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
     MatButtonModule,  // Pour mat-button
     MatIconModule,    // Pour mat-icon
     MatListModule,
-    AppRoutingModule
+    AppRoutingModule,
+    CommonModule,
+    FormsModule,
+    RouterModule.forRoot([])
   ],
   providers: [
     provideAnimationsAsync()

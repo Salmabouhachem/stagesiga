@@ -1,4 +1,396 @@
-<div class="dashboard">
-  <h2>Bienvenue, Client 🙋‍♂️</h2>
-  <p>Voici votre espace personnel. Vous pouvez consulter vos informations.</p>
+<div class="client-container">
+  <!-- Navigation Client -->
+  <nav class="client-navbar">
+    <ul>
+      <li [class.active]="currentSection === 'dashboard'" 
+          (click)="currentSection = 'dashboard'">
+        <i class="fas fa-tachometer-alt"></i> Tableau de bord
+      </li>
+      <li [class.active]="currentSection === 'nouvelle-demande'"
+          (click)="currentSection = 'nouvelle-demande'">
+        <i class="fas fa-plus"></i> Nouvelle demande
+      </li>
+      <li [class.active]="currentSection === 'mes-demandes'" 
+          (click)="currentSection = 'mes-demandes'">
+        <i class="fas fa-list"></i> Mes demandes
+      </li>
+      <li [class.active]="currentSection === 'mes-devis'" 
+          (click)="currentSection = 'mes-devis'">
+        <i class="fas fa-file-invoice"></i> Mes devis
+      </li>
+      <li (click)="logout()">
+        <i class="fas fa-sign-out-alt"></i> Déconnexion
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Contenu principal Client -->
+  <div class="client-content">
+    <!-- Tableau de bord Client -->
+    <section *ngIf="currentSection === 'dashboard'">
+      <h1>Bonjour, {{ clientName }}</h1>
+      
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h3>Demandes actives</h3>
+          <p>{{ activeRequests }}</p>
+          <small *ngIf="activeRequests === 0">Aucune demande active</small>
+        </div>
+        
+        <div class="stat-card">
+          <h3>Devis en attente</h3>
+          <p>{{ pendingQuotes }}</p>
+          <small *ngIf="pendingQuotes === 0">Aucun devis en attente</small>
+        </div>
+        
+        <div class="stat-card">
+          <h3>Demandes terminées</h3>
+          <p>{{ completedRequests }}</p>
+          <small *ngIf="completedRequests === 0">Aucune demande terminée</small>
+        </div>
+      </div>
+
+      <!-- Demandes récentes -->
+      <div class="section">
+        <h2>Mes dernières demandes</h2>
+        <div *ngIf="myRequests.length > 0; else noRequests" class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Référence</th>
+                <th>Date</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let request of myRequests.slice(0, 3)" (click)="viewDemandeDetails(request)">
+                <td>#{{ request.id }}</td>
+                <td>{{ request.date | date:'dd/MM/yyyy' }}</td>
+                <td>
+                  <span class="status-badge" [ngClass]="request.status">
+                    <i class="fas" [ngClass]="{
+                      'fa-plus-circle': request.status === 'new',
+                      'fa-spinner fa-pulse': request.status === 'in-progress',
+                      'fa-check-circle': request.status === 'completed'
+                    }"></i>
+                    {{ getStatusLabel(request.status) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #noRequests>
+          <div class="no-data">
+            <i class="fas fa-inbox"></i>
+            <p>Vous n'avez aucune demande</p>
+          </div>
+        </ng-template>
+      </div>
+    </section>
+
+    <!-- Nouvelle Demande -->
+    <section *ngIf="currentSection === 'nouvelle-demande'">
+      <h1>Nouvelle demande de branchement</h1>
+      
+      <form class="demande-form" (ngSubmit)="submitDemande()">
+        <div class="form-section">
+          <h2><i class="fas fa-user"></i> Informations personnelles</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nom *</label>
+              <input type="text" [(ngModel)]="demande.nom" name="nom" required>
+            </div>
+            <div class="form-group">
+              <label>Prénom *</label>
+              <input type="text" [(ngModel)]="demande.prenom" name="prenom" required>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Email *</label>
+              <input type="email" [(ngModel)]="demande.email" name="email" required>
+            </div>
+            <div class="form-group">
+              <label>Téléphone *</label>
+              <input type="tel" [(ngModel)]="demande.telephone" name="telephone" required>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>CIN *</label>
+            <input type="text" [(ngModel)]="demande.cin" name="cin" required>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2><i class="fas fa-map-marker-alt"></i> Adresse de branchement</h2>
+          <div class="form-group">
+            <label>Adresse complète *</label>
+            <textarea [(ngModel)]="demande.adresse" name="adresse" required></textarea>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2><i class="fas fa-map-marked-alt"></i> Localisation GPS</h2>
+          
+          <div class="alert alert-info mb-3">
+            <i class="fas fa-info-circle"></i> Entrez manuellement les coordonnées GPS
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Latitude *</label>
+              <input type="number" step="0.00001" [(ngModel)]="demande.latitude" 
+                    name="latitude" required placeholder="Ex: 33.5731">
+            </div>
+            <div class="form-group">
+              <label>Longitude *</label>
+              <input type="number" step="0.00001" [(ngModel)]="demande.longitude" 
+                    name="longitude" required placeholder="Ex: -7.5898">
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-outline-primary" (click)="getCurrentPosition()">
+            <i class="fas fa-location-arrow"></i> Utiliser ma position actuelle
+          </button>
+        </div>
+
+        <div class="form-section">
+          <h2><i class="fas fa-info-circle"></i> Détails du branchement</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nature du client *</label>
+              <select [(ngModel)]="demande.natureClient" name="natureClient" required>
+                <option *ngFor="let option of natureClientOptions" [value]="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Usage *</label>
+              <select [(ngModel)]="demande.usage" name="usage" required>
+                <option *ngFor="let option of usageOptions" [value]="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Description supplémentaire</label>
+            <textarea [(ngModel)]="demande.description" name="description" rows="3"></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-submit">
+            <i class="fas fa-paper-plane"></i> Soumettre la demande
+          </button>
+          <button type="button" (click)="resetDemandeForm(); currentSection = 'dashboard'" class="btn btn-cancel">
+            <i class="fas fa-times"></i> Annuler
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Section Mes Demandes -->
+    <section *ngIf="currentSection === 'mes-demandes'">
+      <h2>Historique de mes demandes</h2>
+      
+      <div *ngIf="myRequests.length > 0; else noRequestsAll" class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Référence</th>
+              <th>Date</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let demande of myRequests">
+              <td>#{{ demande.id }}</td>
+              <td>{{ demande.date | date:'dd/MM/yyyy' }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="demande.status">
+                  {{ getStatusLabel(demande.status) }}
+                </span>
+              </td>
+              <td>
+                <button (click)="viewDemandeDetails(demande); $event.stopPropagation()" class="btn-action">
+                  <i class="fas fa-eye"></i> Voir
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noRequestsAll>
+        <div class="no-data">
+          <i class="fas fa-inbox"></i>
+          <p>Vous n'avez aucune demande</p>
+          <button (click)="currentSection = 'nouvelle-demande'" class="btn">
+            <i class="fas fa-plus"></i> Créer une demande
+          </button>
+        </div>
+      </ng-template>
+    </section>
+
+    <!-- Détails de la demande -->
+    <section *ngIf="currentSection === 'demande-details' && selectedDemande">
+      <div class="header-actions">
+        <button (click)="currentSection = 'mes-demandes'">
+          <i class="fas fa-arrow-left"></i> Retour
+        </button>
+        <h2>Détails de la demande #{{ selectedDemande.id }}</h2>
+      </div>
+
+      <div class="demande-details-container">
+        <form (ngSubmit)="updateClientInfo()">
+          <!-- Section Informations personnelles -->
+          <div class="demande-section">
+            <h3><i class="fas fa-user"></i> Informations personnelles</h3>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nom *</label>
+                <input type="text" [(ngModel)]="selectedDemande.nom" name="nom" required>
+              </div>
+              <div class="form-group">
+                <label>Prénom *</label>
+                <input type="text" [(ngModel)]="selectedDemande.prenom" name="prenom" required>
+              </div>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label>Email *</label>
+                <input type="email" [(ngModel)]="selectedDemande.email" name="email" required>
+              </div>
+              <div class="form-group">
+                <label>Téléphone *</label>
+                <input type="tel" [(ngModel)]="selectedDemande.telephone" name="telephone" required>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>CIN *</label>
+              <input type="text" [(ngModel)]="selectedDemande.cin" name="cin" required>
+            </div>
+          </div>
+
+          <!-- Section Adresse -->
+          <div class="demande-section">
+            <h3><i class="fas fa-map-marker-alt"></i> Adresse</h3>
+            <div class="form-group">
+              <label>Adresse complète *</label>
+              <textarea [(ngModel)]="selectedDemande.adresse" name="adresse" required></textarea>
+            </div>
+          </div>
+
+          <!-- Section Localisation GPS -->
+          <div class="demande-section">
+            <h3><i class="fas fa-map-marked-alt"></i> Localisation GPS</h3>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label>Latitude *</label>
+                <input type="number" step="0.000001" [(ngModel)]="selectedDemande.latitude" 
+                      name="latitude" required>
+              </div>
+              <div class="form-group">
+                <label>Longitude *</label>
+                <input type="number" step="0.000001" [(ngModel)]="selectedDemande.longitude" 
+                      name="longitude" required>
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-outline-primary" (click)="getCurrentPositionForSelected()">
+              <i class="fas fa-location-arrow"></i> Utiliser ma position actuelle
+            </button>
+          </div>
+
+          <!-- Section Détails du branchement -->
+          <div class="demande-section">
+            <h3><i class="fas fa-info-circle"></i> Détails du branchement</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Type de client *</label>
+                <select [(ngModel)]="selectedDemande.natureClient" name="natureClient" required>
+                  <option *ngFor="let option of natureClientOptions" [value]="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Usage *</label>
+                <select [(ngModel)]="selectedDemande.usage" name="usage" required>
+                  <option *ngFor="let option of usageOptions" [value]="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Description supplémentaire</label>
+              <textarea [(ngModel)]="selectedDemande.description" name="description" rows="3"></textarea>
+            </div>
+          </div>
+
+          <!-- Boutons d'action -->
+          <div class="action-buttons">
+            <button type="submit" class="btn btn-submit">
+              <i class="fas fa-save"></i> Enregistrer toutes les modifications
+            </button>
+            <button type="button" (click)="currentSection = 'mes-demandes'" class="btn btn-cancel">
+              <i class="fas fa-times"></i> Annuler
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Section Mes Devis -->
+    <section *ngIf="currentSection === 'mes-devis'">
+      <h2>Mes devis</h2>
+      
+      <div *ngIf="myQuotes.length > 0; else noQuotesAll" class="cards-container">
+        <div *ngFor="let quote of myQuotes" class="quote-card">
+          <div class="quote-header">
+            <h3>Devis #{{ quote.id }}</h3>
+            <span class="date">{{ quote.date | date:'dd/MM/yyyy' }}</span>
+          </div>
+          <div class="quote-body">
+            <p><strong>Montant:</strong> {{ quote.amount | currency:'EUR':'symbol':'1.2-2' }}</p>
+            <p><strong>Statut:</strong> 
+              <span class="status-badge" [ngClass]="getStatusBadgeClass(quote.status)">
+                {{ getStatusLabel(quote.status) }}
+              </span>
+            </p>
+            <p><strong>Description:</strong> {{ quote.description || 'Aucune description' }}</p>
+          </div>
+          <div class="quote-actions">
+            <button (click)="viewQuote(quote.id)" class="btn">
+              <i class="fas fa-eye"></i> Voir le devis
+            </button>
+            <button *ngIf="quote.status === 'pending'" (click)="approveQuote(quote.id); $event.stopPropagation()" class="btn btn-success">
+              <i class="fas fa-check"></i> Accepter
+            </button>
+            <button *ngIf="quote.status === 'pending'" (click)="rejectQuote(quote.id); $event.stopPropagation()" class="btn btn-danger">
+              <i class="fas fa-times"></i> Refuser
+            </button>
+          </div>
+        </div>
+      </div>
+      <ng-template #noQuotesAll>
+        <div class="no-data">
+          <i class="fas fa-file-invoice-dollar"></i>
+          <p>Vous n'avez aucun devis</p>
+        </div>
+      </ng-template>
+    </section>
+  </div>
 </div>

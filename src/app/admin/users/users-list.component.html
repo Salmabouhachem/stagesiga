@@ -1,0 +1,52 @@
+<div class="users-management">
+  <h3>Gestion des Utilisateurs</h3>
+
+  <!-- Filtre par centre -->
+  <div class="filter-section">
+    <label>Filtrer par centre :</label>
+    <select [(ngModel)]="selectedCenter" (change)="filterByCenter()">
+      <option [value]="null">Tous les centres</option>
+      <option *ngFor="let center of centers" [value]="center.id">{{ center.name }}</option>
+    </select>
+  </div>
+
+  <!-- Liste des utilisateurs -->
+  <table>
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Email</th>
+        <th>Rôle</th>
+        <th>Centre(s)</th>
+        <th *ngIf="isAdmin()">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let user of users">
+        <td>{{ user.nom }} {{ user.prenom }}</td>
+        <td>{{ user.email }}</td>
+        <td>{{ user.role }}</td>
+        <td>{{ getCenterNames(user) }}</td>
+        <td *ngIf="isAdmin()">
+          <button (click)="prepareAssignment(user)">Affecter</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Modal d'affectation -->
+  <div *ngIf="userToAssign" class="assignment-modal">
+    <div class="modal-content">
+      <h4>Affecter {{ userToAssign.nom }} à un centre</h4>
+      <select [(ngModel)]="centerToAssign">
+        <option [value]="null">-- Sélectionner un centre --</option>
+        <option *ngFor="let center of centers" [value]="center.id">{{ center.name }}</option>
+      </select>
+      <div class="modal-actions">
+        <button (click)="assignUserToCenter()">Confirmer</button>
+        <button (click)="userToAssign = null">Annuler</button>
+      </div>
+    </div>
+  </div>
+  <!-- users-list.component.html -->
+</div>

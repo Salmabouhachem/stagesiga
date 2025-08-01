@@ -30,11 +30,11 @@
               "src/favicon.ico",
               "src/assets"
             ],
-            "styles": [
-              "@angular/material/prebuilt-themes/azure-blue.css",
-              "src/styles.css"
+             "styles": [
+      "node_modules/leaflet/dist/leaflet.css",
+      "src/styles.css"
             ],
-            "scripts": []
+            "scripts": ["node_modules/leaflet/dist/leaflet.js"]
           },
           "configurations": {
             "production": {

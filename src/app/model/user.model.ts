@@ -1,7 +1,14 @@
+import { Centre } from "./centre.model";
+
+// src/app/model/user.model.ts
 export interface User {
-  id?: number;
-  username: string;
+  id?: number; // Optionnel pour les nouveaux utilisateurs
+  nom: string;
+  prenom: string;
   email: string;
-  password: string;
-  role: string; // "ADMIN", "AGENT", "CLIENT"
+  role: string;
+  active?: boolean;
+  centres?: Centre[];
+  // Alias pour compatibilité
+  name?: string; // alias pour 'nom'
 }

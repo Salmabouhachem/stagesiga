@@ -1,4 +1,338 @@
-<div class="dashboard">
-  <h2>Bienvenue, Agent 🧑‍💼</h2>
-  <p>Vous pouvez gérer les demandes des clients et effectuer des opérations.</p>
+<div class="agent-container">
+  <!-- Navigation Agent -->
+  <nav class="agent-navbar">
+    <ul>
+      <li [class.active]="currentSection === 'dashboard'" 
+          (click)="currentSection = 'dashboard'">
+        <i class="fas fa-tachometer-alt"></i> Tableau de bord
+      </li>
+      <li [class.active]="currentSection === 'demandes'"
+          (click)="currentSection = 'demandes'">
+        <i class="fas fa-list"></i> Demandes
+      </li>
+      <li [class.active]="currentSection === 'devis'" 
+          (click)="currentSection = 'devis'">
+        <i class="fas fa-file-invoice"></i> Devis
+      </li>
+      <li (click)="logout()">
+        <i class="fas fa-sign-out-alt"></i> Déconnexion
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Contenu principal Agent -->
+  <div class="agent-content">
+    <!-- Tableau de bord Agent -->
+    <section *ngIf="currentSection === 'dashboard'">
+      <h1>Bonjour, {{ agentName }}</h1>
+      <p class="center-info">Centre: {{ currentCenter?.name || 'Non affecté' }}</p>
+      
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h3>Demandes en attente</h3>
+          <p>{{ pendingRequests }}</p>
+        </div>
+        
+        <div class="stat-card">
+          <h3>Devis à créer</h3>
+          <p>{{ quotesToCreate }}</p>
+        </div>
+        
+        <div class="stat-card">
+          <h3>Demandes traitées</h3>
+          <p>{{ completedRequests }}</p>
+        </div>
+      </div>
+
+      <!-- Demandes récentes -->
+      <div class="section">
+        <h2>Dernières demandes</h2>
+        <div *ngIf="recentRequests.length > 0; else noRequests" class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Référence</th>
+                <th>Client</th>
+                <th>Date</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let request of recentRequests">
+                <td>#{{ request.id }}</td>
+                <td>{{ request.clientName }}</td>
+                <td>{{ request.date | date:'dd/MM/yyyy' }}</td>
+                <td>
+                  <span class="status-badge" [ngClass]="request.status">
+                    {{ getStatusLabel(request.status) }}
+                  </span>
+                </td>
+                <td>
+                  <button (click)="viewRequestDetails(request)" class="btn-action">
+                    <i class="fas fa-eye"></i> Voir
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #noRequests>
+          <div class="no-data">
+            <i class="fas fa-inbox"></i>
+            <p>Aucune demande récente</p>
+          </div>
+        </ng-template>
+      </div>
+    </section>
+
+    <!-- Section Demandes -->
+    <section *ngIf="currentSection === 'demandes'">
+      <div class="section-header">
+        <h2>Gestion des demandes</h2>
+        <div class="filters">
+          <select [(ngModel)]="statusFilter" (change)="filterRequests()">
+            <option value="all">Tous les statuts</option>
+            <option value="new">Nouvelles</option>
+            <option value="in-progress">En cours</option>
+            <option value="completed">Terminées</option>
+          </select>
+        </div>
+      </div>
+      
+      <div *ngIf="filteredRequests.length > 0; else noRequestsAll" class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Référence</th>
+              <th>Client</th>
+              <th>Date</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let request of filteredRequests">
+              <td>#{{ request.id }}</td>
+              <td>{{ request.clientName }}</td>
+              <td>{{ request.date | date:'dd/MM/yyyy' }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="request.status">
+                  {{ getStatusLabel(request.status) }}
+                </span>
+              </td>
+              <td>
+                <button (click)="viewRequestDetails(request)" class="btn-action">
+                  <i class="fas fa-eye"></i> Voir
+                </button>
+                <button *ngIf="request.status === 'new'" (click)="startProcessingRequest(request)" class="btn-action">
+                  <i class="fas fa-play"></i> Traiter
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noRequestsAll>
+        <div class="no-data">
+          <i class="fas fa-inbox"></i>
+          <p>Aucune demande disponible</p>
+        </div>
+      </ng-template>
+    </section>
+
+    <!-- Détails de la demande -->
+    <section *ngIf="currentSection === 'demande-details' && selectedRequest">
+      <div class="header-actions">
+        <button (click)="currentSection = 'demandes'">
+          <i class="fas fa-arrow-left"></i> Retour
+        </button>
+        <h2>Détails de la demande #{{ selectedRequest.id }}</h2>
+        <div class="request-actions">
+          <button (click)="updateRequestStatus()" class="btn btn-primary">
+            <i class="fas fa-save"></i> Enregistrer
+          </button>
+        </div>
+      </div>
+
+      <div class="request-details-container">
+        <div class="request-section">
+          <h3><i class="fas fa-info-circle"></i> Informations générales</h3>
+          <div class="detail-row">
+            <span class="detail-label">Référence:</span>
+            <span>#{{ selectedRequest.id }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Date:</span>
+            <span>{{ selectedRequest.date | date:'dd/MM/yyyy' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Statut:</span>
+            <select [(ngModel)]="selectedRequest.status">
+              <option value="new">Nouvelle</option>
+              <option value="in-progress">En cours</option>
+              <option value="completed">Terminée</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="request-section">
+          <h3><i class="fas fa-user"></i> Informations client</h3>
+          <div class="detail-row">
+            <span class="detail-label">Nom:</span>
+            <span>{{ selectedRequest.clientName }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Email:</span>
+            <span>{{ selectedRequest.clientEmail }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Téléphone:</span>
+            <span>{{ selectedRequest.clientPhone || 'Non renseigné' }}</span>
+          </div>
+        </div>
+
+        <div class="request-section">
+          <h3><i class="fas fa-map-marker-alt"></i> Adresse</h3>
+          <div class="detail-row">
+            <span>{{ selectedRequest.address || 'Non renseignée' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Coordonnées GPS:</span>
+            <span>{{ selectedRequest.latitude }}, {{ selectedRequest.longitude }}</span>
+          </div>
+        </div>
+
+        <div class="request-section">
+          <h3><i class="fas fa-file-alt"></i> Description</h3>
+          <p>{{ selectedRequest.description }}</p>
+        </div>
+
+        <div class="request-section">
+          <h3><i class="fas fa-comment"></i> Notes internes</h3>
+          <textarea [(ngModel)]="selectedRequest.internalNotes" rows="4"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section Devis -->
+    <section *ngIf="currentSection === 'devis'">
+      <div class="section-header">
+        <h2>Gestion des devis</h2>
+        <div class="actions">
+          <button (click)="createNewQuote()" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nouveau devis
+          </button>
+        </div>
+      </div>
+      
+      <div *ngIf="quotes.length > 0; else noQuotes" class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Référence</th>
+              <th>Client</th>
+              <th>Demande</th>
+              <th>Montant</th>
+              <th>Statut</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let quote of quotes">
+              <td>#{{ quote.id }}</td>
+              <td>{{ quote.clientName }}</td>
+              <td>#{{ quote.requestId }}</td>
+              <td>{{ quote.amount | currency:'EUR':'symbol':'1.2-2' }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="quote.status">
+                  {{ getQuoteStatusLabel(quote.status) }}
+                </span>
+              </td>
+              <td>{{ quote.date | date:'dd/MM/yyyy' }}</td>
+              <td>
+                <button (click)="viewQuoteDetails(quote)" class="btn-action">
+                  <i class="fas fa-eye"></i> Voir
+                </button>
+                <button (click)="editQuote(quote)" class="btn-action">
+                  <i class="fas fa-edit"></i> Modifier
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noQuotes>
+        <div class="no-data">
+          <i class="fas fa-file-invoice-dollar"></i>
+          <p>Aucun devis disponible</p>
+        </div>
+      </ng-template>
+    </section>
+
+    <!-- Création/Édition de devis -->
+    <section *ngIf="currentSection === 'quote-editor'">
+      <div class="header-actions">
+        <button (click)="currentSection = 'devis'">
+          <i class="fas fa-arrow-left"></i> Retour
+        </button>
+        <h2>{{ isEditingQuote ? 'Modifier' : 'Créer' }} un devis</h2>
+      </div>
+
+      <div class="quote-editor-container">
+        <form (ngSubmit)="saveQuote()">
+          <div class="form-section">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Demande associée *</label>
+                <select [(ngModel)]="currentQuote.requestId" name="requestId" required>
+                  <option *ngFor="let request of requestsForQuotes" [value]="request.id">
+                    #{{ request.id }} - {{ request.clientName }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Statut *</label>
+                <select [(ngModel)]="currentQuote.status" name="status" required>
+                  <option value="draft">Brouillon</option>
+                  <option value="sent">Envoyé</option>
+                  <option value="approved">Accepté</option>
+                  <option value="rejected">Refusé</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Montant *</label>
+                <input type="number" step="0.01" [(ngModel)]="currentQuote.amount" name="amount" required>
+              </div>
+              <div class="form-group">
+                <label>Date *</label>
+                <input type="date" [(ngModel)]="currentQuote.date" name="date" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3><i class="fas fa-list"></i> Détails du devis</h3>
+            <div class="form-group">
+              <label>Description *</label>
+              <textarea [(ngModel)]="currentQuote.description" name="description" required rows="4"></textarea>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i> Enregistrer
+            </button>
+            <button type="button" (click)="cancelQuoteEdit()" class="btn btn-secondary">
+              <i class="fas fa-times"></i> Annuler
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
 </div>

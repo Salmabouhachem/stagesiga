@@ -1,0 +1,32 @@
+<div class="centres-container">
+  <h2>Gestion des Centres</h2>
+  
+  <div class="add-centre-form">
+    <input [(ngModel)]="newCentre.code" placeholder="Code" required>
+    <input [(ngModel)]="newCentre.name" placeholder="Nom" required>
+    <input [(ngModel)]="newCentre.ville" placeholder="Ville">
+    <button (click)="addCentre()">Ajouter Centre</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Nom</th>
+        <th>Ville</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let centre of centres">
+        <td>{{ centre.code }}</td>
+        <td>{{ centre.name }}</td>
+        <td>{{ centre.ville || '-' }}</td>
+        <td>
+          <button>Éditer</button>
+          <button>Affecter</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

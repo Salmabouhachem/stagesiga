@@ -10,13 +10,13 @@ public class JwtResponse {
     private String prenom;
     private String telephone;
 
-    public JwtResponse(String token, String email, List<String> roles, String nom, String prenom, String telephone) {
+    public JwtResponse(String token, String email, List<String> roles, String nom, String prenom, String roles2) {
         this.token = token;
         this.email = email;
         this.roles = roles;
         this.nom = nom;
         this.prenom = prenom;
-        this.telephone = telephone;
+        this.telephone = roles2;
     }
 
     // Getters uniquement (optionnellement setters si besoin)

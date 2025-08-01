@@ -23,14 +23,22 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors().and()
-            .csrf().disable() // Désactive CSRF pour les API
+            .csrf(csrf -> csrf.disable()) // Désactive CSRF pour les API
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // Autorise les endpoints d'authentification
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/demandes/**").hasRole("AGENT") // Autorise uniquement les AGENTs
+                // Ajouter cette ligne dans configure(HttpSecurity http)
+.requestMatchers("/api/centres/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
+            )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             );
+        
         return http.build();
     }
+
+
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {

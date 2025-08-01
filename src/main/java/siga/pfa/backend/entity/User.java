@@ -25,6 +25,12 @@ public class User {
         joinColumns = @JoinColumn(name = "user_id"),
         inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
+     @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "user_centres",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "centre_id"))
+    private Set<Centre> centres = new HashSet<>();
+
 
     // === Getters and Setters ===
 
@@ -91,4 +97,24 @@ public class User {
     public void setRoles(Set<Role> roles) {
         this.roles = roles;
     }
+     public Set<Centre> getCentres() {
+        return centres;
+    }
+
+    public void setCentres(Set<Centre> centres) {
+        this.centres = centres;
+    }
+
+    // Méthode utilitaire pour ajouter un centre
+    public void addCentre(Centre centre) {
+        this.centres.add(centre);
+        centre.getUsers().add(this);
+    }
+
+    // Méthode utilitaire pour retirer un centre
+    public void removeCentre(Centre centre) {
+        this.centres.remove(centre);
+        centre.getUsers().remove(this);
+    }
 }
+

@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
+import { lastValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -10,11 +11,12 @@ import { Router } from '@angular/router';
 })
 export class LoginComponent {
   loginForm: FormGroup;
-  errorMessage: string = '';
+  isLoading = false;
+  errorMessage: string | null = null;
 
   constructor(
     private fb: FormBuilder,
-    private http: HttpClient,
+    private authService: AuthService,
     private router: Router
   ) {
     this.loginForm = this.fb.group({
@@ -22,44 +24,57 @@ export class LoginComponent {
       password: ['', Validators.required]
     });
   }
+  onSubmit(): void {
+  if (this.loginForm.invalid) {
+    this.loginForm.markAllAsTouched();
+    return;
+  }
 
-  onSubmit() {
-    if (this.loginForm.valid) {
-      const loginData = this.loginForm.value;
+  this.isLoading = true;
+  const { email, password } = this.loginForm.value;
 
-      this.http.post<any>('http://localhost:8080/api/auth/login', loginData)
-        .subscribe({
-          next: (response) => {
-            // Stocker les infos dans localStorage
-            localStorage.setItem('token', response.token);
-            localStorage.setItem('prenom', response.prenom);
-            localStorage.setItem('nom', response.nom);
-            localStorage.setItem('telephone', response.telephone);
-            localStorage.setItem('role', response.role);
+  this.authService.login(email, password).subscribe({
+    next: (response) => {
+      this.handleLoginSuccess(response);
+    },
+    error: (err) => {
+      this.isLoading = false;
+      this.errorMessage = err.message;
+      console.error('Erreur:', err);
+    }
+  });
+}
 
-            // Redirection selon le rôle
-            switch (response.role) {
-              case 'ROLE_ADMIN':
-                this.router.navigate(['/admin-dashboard']);
-                break;
-              case 'ROLE_AGENT':
-                this.router.navigate(['/agent-dashboard']);
-                break;
-              case 'ROLE_CLIENT':
-                this.router.navigate(['/client-dashboard']);
-                break;
-              default:
-                this.errorMessage = 'Rôle inconnu';
-                break;
-            }
-          },
-          error: (err) => {
-            console.error('Login failed:', err);
-            this.errorMessage = 'Email ou mot de passe incorrect';
-          }
-        });
-    } else {
-      this.errorMessage = 'Veuillez remplir tous les champs correctement.';
+  private handleLoginSuccess(response: any): void {
+  this.isLoading = false;
+
+  if (response.token) {
+    // Stockage du token - même si tu veux éviter localStorage, tu peux stocker en mémoire dans un service
+    localStorage.setItem('auth_token', response.token);
+  }
+
+  if (response.user) {
+    localStorage.setItem('currentUser', JSON.stringify(response.user));
+  }
+
+  // Récupérer le rôle depuis la réponse (à adapter selon le format exact)
+  const role = response.role || (response.user?.role) || '';
+
+  const redirectUrl = this.getRedirectUrl(role);
+  this.router.navigate([redirectUrl]);
+}
+
+  private handleLoginError(error: any): void {
+    console.error('Login error:', error);
+    this.errorMessage = error.error?.message || 'Échec de la connexion. Veuillez réessayer.';
+  }
+
+  private getRedirectUrl(role: string): string {
+    switch(role) {
+      case 'ROLE_ADMIN': return '/admin-dashboard';
+      case 'ROLE_AGENT': return '/agent-dashboard';
+      case 'ROLE_CLIENT': return '/client-dashboard';
+      default: return '/';
     }
   }
 }

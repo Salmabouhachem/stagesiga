@@ -1,37 +1,33 @@
 <div class="auth-page">
- <div class="auth-container">
+  <div class="auth-container">
     <div class="auth-card">
       <h1>Connexion Espace Pro</h1>
       <p class="subtitle">Accédez à votre tableau de bord</p>
 
-      <form class="auth-form">
-        <div class="form-group">
-          <label>Email Professionnel</label>
-          <input type="email" placeholder="email@votreentreprise.com">
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
+        <!-- Affiche le message d'erreur -->
+        <div *ngIf="errorMessage" class="alert alert-danger">
+          {{ errorMessage }}
         </div>
-        
-        <div class="form-group">
-          <label>Mot de passe</label>
-          <input type="password" placeholder="••••••••">
-        </div>
-
-        <div class="form-options">
-          <label class="remember-me">
-            <input type="checkbox"> Se souvenir de moi
-          </label>
-          <a href="#" class="forgot-password">Mot de passe oublié ?</a>
-        </div>
-
-        <button type="submit" class="btn primary full-width">Se connecter</button>
-
-        <div class="auth-divider">
-          <span>ou</span>
-        </div>
-
-        <button type="button" class="btn secondary full-width">
-          <i class="fab fa-google"></i> Continuer avec Google
-        </button>
-      </form>
-    </div>
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+  <div class="form-group">
+    <label>Email Professionnel</label>
+    <input type="email" formControlName="email" placeholder="Votre email professionnel">
+    <small *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched" class="error">
+      Email professionnel valide requis
+    </small>
   </div>
-</div>
+
+  <div class="form-group">
+    <label>Mot de passe</label>
+    <input type="password" formControlName="password" placeholder="••••••••">
+  </div>
+
+  <button type="submit" [disabled]="loginForm.invalid || isLoading">
+    {{ isLoading ? 'Connexion en cours...' : 'Se connecter' }}
+  </button>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+</form>

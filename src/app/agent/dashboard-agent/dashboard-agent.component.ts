@@ -90,12 +90,21 @@ export class AgentDashboardComponent implements OnInit {
     this.loadAgentData();
   }
 
-  loadAgentInfo(): void {
-    const user = this.authService.getCurrentUser();
-    this.agentName = user?.name || 'Agent';
-    this.agentId = user?.id || '';
-    this.currentCenter = { id: 1, name: 'Centre Principal' };
-  }
+loadAgentInfo(): void {
+  this.authService.getCurrentUser().subscribe({
+    next: (user) => {
+      this.agentName = user?.name || 'Agent';
+      this.agentId = user?.id || '';
+      this.currentCenter = { id: 1, name: 'Centre Principal' };
+    },
+    error: (err) => {
+      console.error('Erreur lors du chargement des infos agent', err);
+      this.agentName = 'Agent';
+      this.agentId = '';
+      this.currentCenter = { id: 1, name: 'Centre Principal' };
+    }
+  });
+}
 
   loadAgentData(): void {
   this.apiService.getAgentRequests(this.agentId).subscribe({

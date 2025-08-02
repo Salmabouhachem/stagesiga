@@ -111,3 +111,13 @@
     gap: 0;
   }
 }
+button {
+  transform: scale(0.95);
+  background-color: #2a5c99;
+  transition: transform 0.1s, background-color 0.1s;
+}
+.btn-clicked {
+  transform: scale(0.95);
+  background-color: #0053ba;
+  transition: transform 0.1s, background-color 0.1s;
+}

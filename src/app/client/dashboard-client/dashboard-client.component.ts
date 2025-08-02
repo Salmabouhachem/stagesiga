@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { lastValueFrom } from 'rxjs';
 
 type DemandeStatus = 'new' | 'in-progress' | 'completed';
 type QuoteStatus = 'pending' | 'approved' | 'rejected';
@@ -9,7 +11,7 @@ type RequestStatus = DemandeStatus | 'pending';
 interface User {
   email: string;
   name: string;
-  active: boolean;
+  roles: string[];
 }
 
 interface Request {
@@ -41,17 +43,10 @@ interface DemandeBranchement {
   cin: string;
   telephone: string;
   adresse: string;
-  latitude: string;
-  longitude: string;
-  natureClient: string;
-  usage: string;
-}
-
-interface AppData {
-  users: { [email: string]: User };
-  requests: Request[];
-  quotes: Quote[];
-  demandes: DemandeBranchement[];
+  latitude: number;
+  longitude: number;
+  natureClient: 'particulier' | 'entreprise' | 'administration' | 'autre';
+  usage: 'domestique' | 'commercial' | 'industriel' | 'agricole';
 }
 
 @Component({
@@ -62,7 +57,7 @@ interface AppData {
 export class ClientDashboardComponent implements OnInit {
   currentSection = 'dashboard';
   clientName = '';
-  newRequestDescription = '';
+  clientEmail = '';
   showRequestForm = false;
   
   // Statistiques
@@ -73,27 +68,21 @@ export class ClientDashboardComponent implements OnInit {
   // Données
   myRequests: (Request | DemandeBranchement)[] = [];
   myQuotes: Quote[] = [];
-  clientEmail = '';
   selectedDemande: DemandeBranchement | null = null;
-  originalDemande: DemandeBranchement | null = null;
 
   // Formulaire de demande
-  demande: DemandeBranchement = {
-    id: 0,
-    client: '',
-    date: '',
-    status: 'new',
+  demande: Omit<DemandeBranchement, 'id' | 'client' | 'date' | 'status'> = {
     description: '',
     nom: '',
+    prenom: '',
     email: '',
     cin: '',
     telephone: '',
     adresse: '',
-    latitude: '',
-    longitude: '',
+    latitude: 0,
+    longitude: 0,
     natureClient: 'particulier',
-    usage: 'domestique',
-    prenom: ''
+    usage: 'domestique'
   };
 
   natureClientOptions = [
@@ -112,12 +101,12 @@ export class ClientDashboardComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private http: HttpClient
   ) {}
 
-  ngOnInit(): void {
-    this.initClientData();
-    this.loadClientInfo();
+  async ngOnInit(): Promise<void> {
+    await this.loadClientInfo();
     this.loadClientData();
     this.prefillClientInfo();
   }
@@ -125,16 +114,13 @@ export class ClientDashboardComponent implements OnInit {
   // Méthodes pour gérer les demandes
   viewDemandeDetails(demande: Request | DemandeBranchement): void {
     if ('natureClient' in demande) {
-      // C'est une DemandeBranchement
       this.selectedDemande = { ...demande };
-      this.originalDemande = { ...demande };
     } else {
-      // C'est une Request - conversion en DemandeBranchement
       this.selectedDemande = {
         id: demande.id,
         client: demande.client,
         date: demande.date,
-        status: demande.status as DemandeStatus,
+        status: 'new',
         description: demande.description,
         nom: this.clientName.split(' ')[0] || '',
         prenom: this.clientName.split(' ')[1] || '',
@@ -142,12 +128,11 @@ export class ClientDashboardComponent implements OnInit {
         cin: '',
         telephone: '',
         adresse: '',
-        latitude: '',
-        longitude: '',
+        latitude: 0,
+        longitude: 0,
         natureClient: 'particulier',
         usage: 'domestique'
       };
-      this.originalDemande = { ...this.selectedDemande };
     }
     this.currentSection = 'demande-details';
   }
@@ -155,139 +140,81 @@ export class ClientDashboardComponent implements OnInit {
   async updateClientInfo(): Promise<void> {
     if (!this.selectedDemande) return;
 
-    // Validation des champs obligatoires
-    const requiredFields: (keyof DemandeBranchement)[] = [
-      'nom', 'prenom', 'email', 'cin', 'telephone', 
-      'adresse', 'latitude', 'longitude', 'natureClient', 'usage'
-    ];
+    if (!this.validateDemande(this.selectedDemande)) {
+      return;
+    }
 
-    for (const field of requiredFields) {
-      if (!this.selectedDemande[field]) {
-        alert(`Le champ ${field} est obligatoire`);
+    try {
+      await lastValueFrom(
+        this.http.put(`/api/demandes/${this.selectedDemande.id}`, this.selectedDemande)
+      );
+      this.loadClientData();
+      this.currentSection = 'mes-demandes';
+      this.showSuccessAlert('Informations mises à jour');
+    } catch (error) {
+      this.handleError(error, 'Erreur lors de la mise à jour');
+    }
+  }
+
+  async getCurrentPosition(): Promise<void> {
+    try {
+      const position = await this.getGeolocation();
+      this.demande.latitude = position.coords.latitude;
+      this.demande.longitude = position.coords.longitude;
+    } catch (error) {
+      this.handleError(error, 'Géolocalisation');
+    }
+  }
+
+  private getGeolocation(): Promise<GeolocationPosition> {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Géolocalisation non supportée'));
         return;
       }
-    }
 
-    // Confirmation
-    const confirmed = confirm('Êtes-vous sûr de vouloir modifier toutes les informations de ce client?');
-    if (!confirmed) return;
-
-    // Mise à jour des données
-    const appData = this.getAppData();
-    if (!appData) return;
-
-    // Mettre à jour la demande
-    appData.demandes = appData.demandes.map(d => 
-      d.id === this.selectedDemande?.id ? this.selectedDemande : d
-    );
-
-    // Mettre à jour dans requests (si c'est une request)
-    appData.requests = appData.requests.map(r => 
-      r.id === this.selectedDemande?.id ? { 
-        ...r,
-        client: this.selectedDemande.email,
-        description: `Demande de ${this.selectedDemande.nom} ${this.selectedDemande.prenom}`
-      } : r
-    );
-
-    this.saveAppData(appData);
-    this.loadClientData();
-    this.currentSection = 'mes-demandes';
-    alert('Informations client mises à jour avec succès');
+      navigator.geolocation.getCurrentPosition(resolve, reject);
+    });
   }
 
-  getCurrentPosition(): void {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          this.demande.latitude = position.coords.latitude.toString();
-          this.demande.longitude = position.coords.longitude.toString();
-        },
-        (error) => {
-          console.error('Erreur de géolocalisation', error);
-          alert('Impossible d\'obtenir votre position. Veuillez entrer manuellement les coordonnées.');
-        }
-      );
-    } else {
-      alert('La géolocalisation n\'est pas supportée par votre navigateur');
+  private async loadClientInfo(): Promise<void> {
+    try {
+      const user = await lastValueFrom(this.authService.getCurrentUser());
+      this.clientEmail = user?.email || '';
+      this.clientName = user?.name || user?.email?.split('@')[0] || 'Client';
+      this.demande.email = this.clientEmail;
+    } catch (error) {
+      this.handleError(error, 'Chargement des infos client');
     }
-  }
-
-  getCurrentPositionForSelected(): void {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          if (this.selectedDemande) {
-            this.selectedDemande.latitude = position.coords.latitude.toString();
-            this.selectedDemande.longitude = position.coords.longitude.toString();
-          }
-        },
-        (error) => {
-          console.error('Erreur de géolocalisation', error);
-          alert('Impossible d\'obtenir votre position. Veuillez entrer manuellement les coordonnées.');
-        }
-      );
-    } else {
-      alert('La géolocalisation n\'est pas supportée par votre navigateur');
-    }
-  }
-
-  private initClientData(): void {
-    if (!this.getAppData()) {
-      const initialData: AppData = {
-        users: {},
-        requests: [],
-        quotes: [],
-        demandes: []
-      };
-      this.saveAppData(initialData);
-    }
-  }
-
-  private loadClientInfo(): void {
-    const user = this.authService.getCurrentUser();
-    this.clientEmail = user?.email || '';
-    this.clientName = user?.name || user?.email?.split('@')[0] || 'Client';
   }
 
   private prefillClientInfo(): void {
-    const user = this.authService.getCurrentUser();
-    if (user) {
-      this.demande.email = user.email || '';
-      this.demande.nom = user.name || user.email?.split('@')[0] || '';
-    }
+    const nameParts = this.clientName.split(' ');
+    this.demande.nom = nameParts[0] || '';
+    this.demande.prenom = nameParts.slice(1).join(' ') || '';
   }
 
-  private getAppData(): AppData | null {
+  private async loadClientData(): Promise<void> {
     try {
-      const data = localStorage.getItem('appData');
-      return data ? JSON.parse(data) : null;
-    } catch (e) {
-      console.error('Error parsing appData', e);
-      return null;
+      const [requests, quotes, demandes] = await Promise.all([
+        lastValueFrom(this.http.get<Request[]>('/api/requests')),
+        lastValueFrom(this.http.get<Quote[]>('/api/quotes')),
+        lastValueFrom(this.http.get<DemandeBranchement[]>('/api/demandes'))
+      ]);
+
+      this.myRequests = [...requests, ...demandes]
+        .filter(req => req.client === this.clientEmail)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      this.myQuotes = quotes.filter(quote => quote.client === this.clientEmail);
+
+      this.updateStatistics();
+    } catch (error) {
+      this.handleError(error, 'Chargement des données');
     }
   }
 
-  private saveAppData(data: AppData): void {
-    localStorage.setItem('appData', JSON.stringify(data));
-  }
-
-  private loadClientData(): void {
-    const appData = this.getAppData();
-    if (!appData) return;
-
-    if (!appData.demandes) {
-      appData.demandes = [];
-      this.saveAppData(appData);
-    }
-
-    this.myRequests = [...appData.requests, ...appData.demandes]
-      .filter(req => req.client === this.clientEmail)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    this.myQuotes = appData.quotes
-      .filter(quote => quote.client === this.clientEmail);
-
+  private updateStatistics(): void {
     this.activeRequests = this.myRequests
       .filter(req => req.status !== 'completed').length;
       
@@ -298,44 +225,44 @@ export class ClientDashboardComponent implements OnInit {
       .filter(req => req.status === 'completed').length;
   }
 
-  submitDemande(): void {
-    if (!this.validateDemande()) {
+  async submitDemande(): Promise<void> {
+    if (!this.validateDemande(this.demande)) {
       return;
     }
 
-    const appData = this.getAppData();
-    if (!appData) return;
+    try {
+      const demandeToSend: DemandeBranchement = {
+        ...this.demande,
+        id: 0, // Le backend générera l'ID
+        client: this.clientEmail,
+        date: new Date().toISOString().split('T')[0],
+        status: 'new'
+      };
 
-    this.demande.id = this.generateId();
-    this.demande.client = this.clientEmail;
-    this.demande.date = new Date().toISOString().split('T')[0];
-    this.demande.status = 'new';
-
-    appData.demandes.push({...this.demande});
-    this.saveAppData(appData);
-    
-    this.loadClientData();
-    this.currentSection = 'dashboard';
-    this.resetDemandeForm();
+      await lastValueFrom(this.http.post('/api/demandes', demandeToSend));
+      
+      this.loadClientData();
+      this.currentSection = 'dashboard';
+      this.resetDemandeForm();
+      this.showSuccessAlert('Demande soumise avec succès');
+    } catch (error) {
+      this.handleError(error, 'Soumission de demande');
+    }
   }
 
-  private validateDemande(): boolean {
-    const requiredFields = ['nom','prenom', 'email', 'cin', 'telephone', 'adresse', 'latitude', 'longitude'];
+  private validateDemande(demande: any): boolean {
+    const requiredFields = ['nom', 'prenom', 'email', 'cin', 'telephone', 'adresse'];
     for (const field of requiredFields) {
-      if (!this.demande[field as keyof DemandeBranchement]) {
-        alert(`Le champ ${field} est obligatoire`);
+      if (!demande[field]) {
+        this.showErrorAlert(`Le champ ${field} est obligatoire`);
         return false;
       }
     }
     return true;
   }
 
-  resetDemandeForm(): void {
+   resetDemandeForm(): void {
     this.demande = {
-      id: 0,
-      client: '',
-      date: '',
-      status: 'new',
       description: '',
       nom: '',
       prenom: '',
@@ -343,102 +270,106 @@ export class ClientDashboardComponent implements OnInit {
       cin: '',
       telephone: '',
       adresse: '',
-      latitude: '',
-      longitude: '',
+      latitude: 0,
+      longitude: 0,
       natureClient: 'particulier',
       usage: 'domestique'
     };
   }
 
-  createNewRequest(): void {
-    if (!this.newRequestDescription.trim()) return;
-
-    const appData = this.getAppData();
-    if (!appData) return;
-
-    const newRequest: Request = {
-      id: this.generateId(),
-      client: this.clientEmail,
-      date: new Date().toISOString().split('T')[0],
-      status: 'new',
-      description: this.newRequestDescription
+  // Méthodes utilitaires
+  getStatusInfo(status: string): { label: string, class: string } {
+    const statusMap: Record<string, { label: string, class: string }> = {
+      'new': { label: 'Nouvelle', class: 'badge-primary' },
+      'in-progress': { label: 'En cours', class: 'badge-warning' },
+      'completed': { label: 'Terminée', class: 'badge-success' },
+      'pending': { label: 'En attente', class: 'badge-info' },
+      'approved': { label: 'Approuvé', class: 'badge-success' },
+      'rejected': { label: 'Rejeté', class: 'badge-danger' }
     };
 
-    appData.requests.push(newRequest);
-    this.saveAppData(appData);
-    this.newRequestDescription = '';
-    this.showRequestForm = false;
-    this.loadClientData();
-  }
-
-  viewQuote(quoteId: number): void {
-    this.router.navigate(['/quotes', quoteId]);
-  }
-
-  approveQuote(quoteId: number): void {
-    this.updateQuoteStatus(quoteId, 'approved');
-  }
-
-  rejectQuote(quoteId: number): void {
-    this.updateQuoteStatus(quoteId, 'rejected');
-  }
-
-  private updateQuoteStatus(quoteId: number, status: 'approved' | 'rejected'): void {
-    const appData = this.getAppData();
-    if (!appData) return;
-
-    appData.quotes = appData.quotes.map(quote => 
-      quote.id === quoteId ? { ...quote, status } : quote
-    );
-
-    this.saveAppData(appData);
-    this.loadClientData();
-  }
-
-  // Méthodes utilitaires
-  getStatusLabel(status: string): string {
-    switch (status) {
-      case 'new': return 'Nouvelle';
-      case 'in-progress': return 'En cours';
-      case 'completed': return 'Terminée';
-      case 'pending': return 'En attente';
-      case 'approved': return 'Approuvé';
-      case 'rejected': return 'Rejeté';
-      default: return status;
-    }
+    return statusMap[status] || { label: status, class: 'badge-secondary' };
   }
 
   getNatureClientLabel(value: string): string {
-    const option = this.natureClientOptions.find(opt => opt.value === value);
-    return option ? option.label : value;
+    return this.natureClientOptions.find(opt => opt.value === value)?.label || value;
   }
 
   getUsageLabel(value: string): string {
-    const option = this.usageOptions.find(opt => opt.value === value);
-    return option ? option.label : value;
+    return this.usageOptions.find(opt => opt.value === value)?.label || value;
   }
 
-  getStatusBadgeClass(status: string): string {
-    switch (status) {
-      case 'new': return 'badge-primary';
-      case 'in-progress': return 'badge-warning';
-      case 'completed': return 'badge-success';
-      case 'pending': return 'badge-info';
-      case 'approved': return 'badge-success';
-      case 'rejected': return 'badge-danger';
-      default: return 'badge-secondary';
-    }
+  private showSuccessAlert(message: string): void {
+    alert(`Succès: ${message}`);
   }
 
-  toggleRequestForm(): void {
-    this.showRequestForm = !this.showRequestForm;
+  private showErrorAlert(message: string): void {
+    alert(`Erreur: ${message}`);
   }
 
-  private generateId(): number {
-    return Date.now() + Math.floor(Math.random() * 1000);
+  private handleError(error: any, context: string): void {
+    console.error(`[${context}]`, error);
+    this.showErrorAlert(`${context}: ${error.message || 'Erreur inconnue'}`);
   }
 
   logout(): void {
-    this.authService.logout();
+    this.authService.logout().subscribe({
+      next: () => this.router.navigate(['/login']),
+      error: (err) => this.handleError(err, 'Déconnexion')
+    });
   }
+  // Dans ClientDashboardComponent
+getStatusLabel(status: string): string {
+  switch (status) {
+    case 'new': return 'Nouvelle';
+    case 'in-progress': return 'En cours';
+    case 'completed': return 'Terminée';
+    case 'pending': return 'En attente';
+    case 'approved': return 'Approuvé';
+    case 'rejected': return 'Rejeté';
+    default: return status;
+  }
+}
+
+getStatusBadgeClass(status: string): string {
+  switch (status) {
+    case 'new': return 'badge-primary';
+    case 'in-progress': return 'badge-warning';
+    case 'completed': return 'badge-success';
+    case 'pending': return 'badge-info';
+    case 'approved': return 'badge-success';
+    case 'rejected': return 'badge-danger';
+    default: return 'badge-secondary';
+  }
+}
+
+getCurrentPositionForSelected(): void {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (this.selectedDemande) {
+          this.selectedDemande.latitude = position.coords.latitude;
+          this.selectedDemande.longitude = position.coords.longitude;
+        }
+      },
+      (error) => console.error('Erreur de géolocalisation', error)
+    );
+  }
+}
+
+viewQuote(quoteId: number): void {
+  this.router.navigate(['/quotes', quoteId]);
+}
+
+approveQuote(quoteId: number): void {
+  this.updateQuoteStatus(quoteId, 'approved');
+}
+
+rejectQuote(quoteId: number): void {
+  this.updateQuoteStatus(quoteId, 'rejected');
+}
+
+private updateQuoteStatus(quoteId: number, status: 'approved' | 'rejected'): void {
+  // Implémentez la logique de mise à jour ici
+}
 }

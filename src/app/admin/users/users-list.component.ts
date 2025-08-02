@@ -3,6 +3,7 @@ import { User } from '../../model/user.model';
 import { Centre } from '../../model/centre.model';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
+import { catchError, map, Observable, of } from 'rxjs';
 
 @Component({
   selector: 'app-users-list',
@@ -58,9 +59,12 @@ export class UsersListComponent {
     error: (err) => console.error(err)
   });
 }
-   isAdmin(): boolean {
-    return this.authService.getCurrentUserRole() === 'ADMIN';
-  }
+  isAdmin(): Observable<boolean> {
+  return this.authService.getCurrentUserRole().pipe(
+    map(role => role === 'ADMIN'),
+    catchError(() => of(false)) // Gestion des erreurs
+  );
+}
   getCenterNames(user: User): string {
     // Implement your logic to get center names from the user object
     // For example:

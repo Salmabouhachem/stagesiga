@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, catchError, tap, throwError } from 'rxjs';
-import { JwtHelper } from './jwt.helper';
+import { Observable, catchError, map, of, tap, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -15,161 +14,134 @@ export class AuthService {
     'ROLE_CLIENT': '/client-dashboard',
     'DEFAULT': '/profile'
   };
-    getCurrentUserRole(): string {
-    // Implémentation exemple - adaptez à votre code réel
-    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    return user.role || '';
-  }
 
   constructor(
     private http: HttpClient,
-    private router: Router,
-    private jwtHelper: JwtHelper
+    private router: Router
   ) {}
-
-  // Authentication methods
-  isLoggedIn(): boolean {
-  const token = this.getToken();
-  if (!token) return false;
-  
-  // Vérifie l'expiration du token
-  const isExpired = this.jwtHelper.isTokenExpired(token);
-  if (isExpired) {
-    console.warn('Token expiré');
-    this.logout();
-  }
-  return !isExpired;
-}
-
-  login(credentials: { email: string, password: string }): Observable<any> {
-    return this.http.post(`${this.apiUrl}/login`, credentials).pipe(
-      tap((response: any) => {
-        if (response.token) {
-          this.saveAuthData(response);
-          this.redirectBasedOnRole(response.roles);
-        }
-      }),
-      catchError(this.handleError)
-    );
-  }
-
-  signup(userData: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/signup`, userData).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  // Token and role management
-  private saveAuthData(authResponse: any): void {
-    const authData = {
-      token: authResponse.token,
-      user: {
-        email: authResponse.email,
-        roles: authResponse.roles || [],
-        id: authResponse.id
-      }
-    };
-    localStorage.setItem('authData', JSON.stringify(authData));
-  }
-  hasAnyRole(requiredRoles: string[]): boolean {
-  const userRoles = this.getUserRoles();
-  return requiredRoles.some(role => 
-    userRoles.includes(this.normalizeRole(role))
+   // auth.service.ts
+   // auth.service.ts
+signup(userData: {
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone: string;
+  role: string;
+  password: string;
+}): Observable<any> {
+  return this.http.post('http://localhost:8080/api/auth/signup', userData).pipe(
+    catchError(error => {
+      return throwError(() => new Error(error.error.message || 'Erreur lors de l\'inscription'));
+    })
   );
 }
-
-  getCurrentUser(): any {
-    try {
-      const authData = localStorage.getItem('authData');
-      return authData ? JSON.parse(authData).user : null;
-    } catch (error) {
-      console.error('Error parsing auth data:', error);
-      this.logout();
-      return null;
-    }
+  // Authentification basée sur le backend (session/cookie)
+login(email: string, password: string): Observable<any> {
+  return this.http.post<any>('http://localhost:8080/api/auth/login', {
+    email,
+    password
+  }).pipe(
+    catchError(error => {
+      console.error('Erreur de login:', error);
+      let errorMsg = 'Échec de la connexion';
+      
+      if (error.status === 401) {
+        errorMsg = 'Email ou mot de passe incorrect';
+      } else if (error.status === 0) {
+        errorMsg = 'Serveur indisponible';
+      }
+      
+      return throwError(() => new Error(errorMsg));
+    })
+  );
+}
+  // Vérifie si l'utilisateur est authentifié via le backend
+  isLoggedIn(): Observable<boolean> {
+    return this.getCurrentUser().pipe(
+      map(user => !!user),
+      catchError(() => of(false))
+    );
   }
 
-  getToken(): string | null {
-    const authData = localStorage.getItem('authData');
-    return authData ? JSON.parse(authData).token : null;
+  // Récupère les infos de l'utilisateur depuis le backend
+  getCurrentUser(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/current-user`, { withCredentials: true }).pipe(
+      catchError(() => of(null))
+    );
   }
 
-  getUserRoles(): string[] {
-    const user = this.getCurrentUser();
-    return user?.roles || [];
+  // Récupère le rôle de l'utilisateur depuis le backend
+  getCurrentUserRole(): Observable<string> {
+    return this.getCurrentUser().pipe(
+      map(user => user?.roles?.[0] || ''),
+      catchError(() => of(''))
+    );
   }
 
-  // Role checking
-  hasRole(requiredRole: string): boolean {
-    const userRoles = this.getUserRoles();
-    const normalizedRole = this.normalizeRole(requiredRole);
-    return userRoles.includes(normalizedRole);
+  // Vérification des rôles
+  hasRole(requiredRole: string): Observable<boolean> {
+    return this.getCurrentUser().pipe(
+      map(user => {
+        const roles = user?.roles || [];
+        const normalizedRole = this.normalizeRole(requiredRole);
+        return roles.includes(normalizedRole);
+      }),
+      catchError(() => of(false))
+    );
+  }
+
+  hasAnyRole(requiredRoles: string[]): Observable<boolean> {
+    return this.getCurrentUser().pipe(
+      map(user => {
+        const userRoles = user?.roles || [];
+        return requiredRoles.some(role => 
+          userRoles.includes(this.normalizeRole(role))
+        );
+      }),
+      catchError(() => of(false))
+    );
   }
 
   private normalizeRole(role: string): string {
     return role.startsWith('ROLE_') ? role : `ROLE_${role}`;
   }
 
-  isAdmin(): boolean {
-    return this.hasRole('ADMIN');
-  }
-
-  isAgent(): boolean {
-    return this.hasRole('AGENT');
-  }
-
-  isClient(): boolean {
-    return this.hasRole('CLIENT');
-  }
-
-  // Token validation
-  isTokenValid(): boolean {
-    const token = this.getToken();
-    if (!token) return false;
+  // Redirection basée sur le rôle
+   redirectBasedOnRole(roles: string[]): void {
+    const mainRole = this.getMainRole(roles);
     
-    try {
-      return !this.jwtHelper.isTokenExpired(token) && 
-             this.hasRequiredClaims(token);
-    } catch {
-      return false;
+    switch (mainRole) {
+      case 'ROLE_ADMIN':
+        this.router.navigate(['/admin-dashboard']);
+        break;
+      case 'ROLE_AGENT':
+        this.router.navigate(['/agent-dashboard']);
+        break;
+      case 'ROLE_CLIENT':
+        this.router.navigate(['/client-dashboard']);
+        break;
+      default:
+        this.router.navigate(['/']);
+        break;
     }
   }
 
-  private hasRequiredClaims(token: string): boolean {
-    const payload = this.jwtHelper.decodePayload(token);
-    return !!payload?.sub && Array.isArray(payload.roles);
-  }
-
-  // Navigation
-  private redirectBasedOnRole(userRoles: string[]): void {
-    const returnUrl = this.getReturnUrl();
-    if (returnUrl) {
-      this.router.navigateByUrl(returnUrl);
-      return;
-    }
-
-    const mainRole = this.getMainRole(userRoles);
-    const targetRoute = this.roleRoutes[mainRole] || this.roleRoutes['DEFAULT'];
-    this.router.navigate([targetRoute]);
-  }
-
-  private getReturnUrl(): string | null {
-    const urlTree = this.router.parseUrl(this.router.url);
-    return urlTree.queryParams['returnUrl'] || null;
-  }
-
-  private getMainRole(roles: string[]): string {
+   private getMainRole(roles: string[]): string {
     const priorityRoles = ['ROLE_ADMIN', 'ROLE_AGENT', 'ROLE_CLIENT'];
-    return priorityRoles.find(role => roles.includes(role)) || roles[0] || 'DEFAULT';
+    return priorityRoles.find(role => roles.includes(role)) || roles[0] || '';
   }
 
-  // Logout
-  logout(): void {
-    localStorage.removeItem('authData');
-    this.router.navigate(['/login']);
+  logout(): Observable<any> {
+    return this.http.post(`${this.apiUrl}/logout`, {}, { 
+      withCredentials: true 
+    }).pipe(
+      tap(() => {
+        this.router.navigate(['/login']);
+      })
+    );
   }
 
-  // Error handling
+  // Gestion des erreurs
   private handleError(error: any): Observable<never> {
     let errorMessage = 'Erreur lors de l\'authentification';
     

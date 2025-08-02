@@ -22,12 +22,12 @@
       </div>
 
       <div class="form-group">
-        <label>Email Professionnel</label>
-        <input type="email" formControlName="email" placeholder="email@entreprise.com">
-        <small *ngIf="signupForm.get('email')?.invalid && signupForm.get('email')?.touched" class="error">
-          Email professionnel valide requis
-        </small>
-      </div>
+  <label>Email Professionnel</label>
+  <input type="email" formControlName="email" placeholder="Votre email professionnel">
+  <small *ngIf="signupForm.get('email')?.invalid && signupForm.get('email')?.touched" class="error">
+    {{ signupForm.get('email')?.errors?.['required'] ? 'Email requis' : 'Email invalide' }}
+  </small>
+</div>
 
       <div class="form-group">
         <label>Téléphone</label>
@@ -47,13 +47,15 @@
 
 
       <div class="form-group">
-        <label>Mot de passe</label>
-        <input type="password" formControlName="password" placeholder="••••••••">
-        <small class="hint">Minimum 8 caractères avec chiffres et majuscules</small>
-        <small *ngIf="signupForm.get('password')?.invalid && signupForm.get('password')?.touched" class="error">
- 
-        </small>
-      </div>
+  <label>Mot de passe</label>
+  <input type="password" formControlName="password" placeholder="••••••••">
+  <small class="hint">Minimum 8 caractères avec chiffres et majuscules</small>
+  <small *ngIf="signupForm.get('password')?.invalid && signupForm.get('password')?.touched" class="error">
+    {{ signupForm.get('password')?.errors?.['required'] ? 'Mot de passe requis' : '' }}
+    {{ signupForm.get('password')?.errors?.['minlength'] ? '8 caractères minimum' : '' }}
+    {{ signupForm.get('password')?.errors?.['pattern'] ? 'Doit contenir une majuscule et un chiffre' : '' }}
+  </small>
+</div>
 
       <div class="form-group">
         <label>Confirmez le mot de passe</label>
@@ -64,9 +66,15 @@
       </div>
 
 
-      <button type="submit" class="btn primary full-width" [disabled]="signupForm.invalid || isLoading">
-        {{ isLoading ? 'Création en cours...' : 'Créer mon compte' }}
-      </button>
+    <button
+  type="submit"
+  class="btn primary full-width"
+  [class.btn-clicked]="isClicked"
+  (click)="onButtonClick()"
+>
+  {{ isLoading ? 'Création en cours...' : 'Créer mon compte' }}
+</button>
+
 
       <div *ngIf="errorMessage" class="error-message">
         {{ errorMessage }}

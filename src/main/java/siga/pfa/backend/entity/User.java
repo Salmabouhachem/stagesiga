@@ -20,6 +20,8 @@ public class User {
     private String prenom;
     private String telephone;
 
+    
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "user_roles",  // Nom de la table de liaison
         joinColumns = @JoinColumn(name = "user_id"),

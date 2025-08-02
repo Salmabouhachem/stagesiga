@@ -13,7 +13,7 @@ import siga.pfa.backend.entity.Role.RoleName;
 import siga.pfa.backend.entity.User;
 import siga.pfa.backend.repository.RoleRepository;
 import siga.pfa.backend.repository.UserRepository;
-
+import siga.pfa.backend.security.JwtUtils;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,14 +28,15 @@ public class AuthController {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-
+    private final JwtUtils jwtUtils;
     @Autowired
     public AuthController(UserRepository userRepository,
                          RoleRepository roleRepository,
-                         PasswordEncoder passwordEncoder) {
+                         PasswordEncoder passwordEncoder,JwtUtils jwtUtils ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtUtils = jwtUtils;
     }
 
 @PostMapping("/signup")
@@ -57,6 +58,8 @@ public ResponseEntity<Map<String, Object>> registerUser(
     System.out.println("Email: " + request.get("email"));
     System.out.println("Nom: " + request.get("nom"));
     System.out.println("Téléphone: " + request.get("telephone"));
+
+    
     
     Map<String, Object> response = new HashMap<>();
     
@@ -71,7 +74,7 @@ public ResponseEntity<Map<String, Object>> registerUser(
         // 2. Logique d'inscription
         User user = new User();
         user.setEmail(request.get("email").toString());
-        user.setPassword(passwordEncoder.encode(request.get("password").toString()));
+        user.setPassword(request.get("password").toString());       
         user.setNom(request.get("nom").toString());
         user.setPrenom(request.get("prenom").toString());
         user.setTelephone(request.get("telephone").toString());
@@ -104,7 +107,7 @@ public ResponseEntity<Map<String, Object>> registerUser(
         return ResponseEntity.internalServerError().body(response);
     }
 }
-    @PostMapping("/login")
+@PostMapping("/login")
 public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> loginRequest) {
     String email = loginRequest.get("email");
     String password = loginRequest.get("password");

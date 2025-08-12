@@ -1,13 +1,17 @@
 package siga.pfa.backend.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-
-import jakarta.servlet.http.HttpServletRequest;
 import siga.pfa.backend.entity.Role;
 import siga.pfa.backend.entity.Role.RoleName;
 import siga.pfa.backend.entity.User;
@@ -18,124 +22,120 @@ import siga.pfa.backend.security.JwtUtils;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:64095") // Port Angular personnalisé
 public class AuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
-    @Autowired
+    private final AuthenticationManager authenticationManager;
+
     public AuthController(UserRepository userRepository,
-                         RoleRepository roleRepository,
-                         PasswordEncoder passwordEncoder,JwtUtils jwtUtils ) {
+                          RoleRepository roleRepository,
+                          PasswordEncoder passwordEncoder,
+                          JwtUtils jwtUtils,
+                          AuthenticationManager authenticationManager) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
+        this.authenticationManager = authenticationManager;
     }
 
-@PostMapping("/signup")
-public ResponseEntity<Map<String, Object>> registerUser(
-        @RequestBody Map<String, Object> request,
-        HttpServletRequest httpRequest) {
-    
-    // Debug des headers
-    System.out.println("=== HEADERS ===");
-    Collections.list(httpRequest.getHeaderNames())
-              .forEach(header -> System.out.println(header + ": " + httpRequest.getHeader(header)));
-    
-    // Debug du body
-    System.out.println("=== BODY ===");
-    System.out.println(request);
-    
-    // Debug des champs
-    System.out.println("=== CHAMPS ===");
-    System.out.println("Email: " + request.get("email"));
-    System.out.println("Nom: " + request.get("nom"));
-    System.out.println("Téléphone: " + request.get("telephone"));
+    @PostMapping("/signup")
+    public ResponseEntity<ResponseDTO> registerUser(@Valid @RequestBody SignupRequest request) {
+        try {
+            // Check if email already exists
+            if (userRepository.findByEmail(request.email()).isPresent()) {
+                return ResponseEntity.badRequest().body(new ResponseDTO("error", "Email already exists", null));
+            }
 
-    
-    
-    Map<String, Object> response = new HashMap<>();
-    
-    try {
-        // 1. Validation des données
-        if (!request.containsKey("email") || !request.containsKey("password")) {
-            response.put("status", "error");
-            response.put("message", "Email et mot de passe requis");
-            return ResponseEntity.badRequest().body(response);
+            // Create user
+            User user = User.builder()
+                    .email(request.email())
+                    .password(passwordEncoder.encode(request.password()))
+                    .nom(request.nom())
+                    .prenom(request.prenom())
+                    .telephone(request.telephone())
+                    .build();
+
+            // Assign role
+            RoleName roleName = RoleName.valueOf(request.role() != null ? request.role() : "ROLE_CLIENT");
+            Role userRole = roleRepository.findByName(roleName)
+                    .orElseThrow(() -> new IllegalArgumentException("Role not found: " + roleName));
+            user.setRoles(Collections.singleton(userRole));
+
+            // Save user
+            userRepository.save(user);
+
+            // Build response
+            Map<String, Object> data = new HashMap<>();
+            data.put("email", user.getEmail());
+            data.put("role", userRole.getName().name());
+            logger.info("User registered successfully: {}", user.getEmail());
+            return ResponseEntity.ok(new ResponseDTO("success", "Registration successful", data));
+        } catch (IllegalArgumentException e) {
+            logger.error("Registration failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ResponseDTO("error", e.getMessage(), null));
+        } catch (Exception e) {
+            logger.error("Registration error: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ResponseDTO("error", "Registration failed", null));
         }
-        
-        // 2. Logique d'inscription
-        User user = new User();
-        user.setEmail(request.get("email").toString());
-        user.setPassword(request.get("password").toString());       
-        user.setNom(request.get("nom").toString());
-        user.setPrenom(request.get("prenom").toString());
-        user.setTelephone(request.get("telephone").toString());
-        
-        // 3. Gestion des rôles
-        String role = request.getOrDefault("role", "CLIENT").toString();
-        Role userRole = roleRepository.findByName(RoleName.valueOf("ROLE_" + role))
-            .orElseThrow(() -> new RuntimeException("Rôle non trouvé"));
-        user.setRoles(Collections.singleton(userRole));
-        
-        // 4. Sauvegarde
-        userRepository.save(user);
-        
-        // 5. Réponse JSON structurée
-        response.put("status", "success");
-        response.put("message", "Inscription réussie");
-        response.put("data", Map.of(
-            "email", user.getEmail(),
-            "role", role
-        ));
-        
-        return ResponseEntity.ok(response);
-        
-    } catch (Exception e) {
-        System.err.println("ERREUR COMPLÈTE:");
-        e.printStackTrace();
-        
-        response.put("status", "error");
-        response.put("message", e.getMessage());
-        return ResponseEntity.internalServerError().body(response);
-    }
-}
-@PostMapping("/login")
-public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> loginRequest) {
-    String email = loginRequest.get("email");
-    String password = loginRequest.get("password");
-    Optional<User> userOpt = userRepository.findByEmail(email);
-
-    if (userOpt.isEmpty()) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
-    User user = userOpt.get();
-    if (!user.getPassword().equals(password)) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    @PostMapping("/login")
+    public ResponseEntity<ResponseDTO> login(@Valid @RequestBody LoginRequest request) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String token = jwtUtils.generateToken(userDetails);
+
+            // Fetch user to include additional details
+            User user = userRepository.findByEmail(userDetails.getUsername())
+                    .orElseThrow(() -> new IllegalStateException("User not found after authentication"));
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("token", token);
+            data.put("user",user);
+            if (!user.getRoles().isEmpty()) {
+                data.put("role", user.getRoles().iterator().next().getName().name());
+            }
+
+            logger.info("User logged in successfully: {}", user.getEmail());
+            return ResponseEntity.ok(new ResponseDTO("success", "Login successful", data));
+        } catch (AuthenticationException e) {
+            logger.error("Login failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ResponseDTO("error", "Invalid credentials", null));
+        } catch (Exception e) {
+            logger.error("Login error: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ResponseDTO("error", "Login failed", null));
+        }
     }
 
-    // 🔍 Affiche les rôles dans la console pour tester
-    System.out.println("Roles de l'utilisateur connecté : " + user.getRoles());
-
-    Map<String, Object> response = new HashMap<>();
-    response.put("token", "fake-jwt-token");
-    response.put("prenom", user.getPrenom());
-    response.put("nom", user.getNom());
-    response.put("telephone", user.getTelephone());
-
-    if (!user.getRoles().isEmpty()) {
-        response.put("role", user.getRoles().iterator().next().getName().name());
+    // DTOs
+    public record SignupRequest(
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Email String email,
+            @jakarta.validation.constraints.NotBlank String password,
+            String nom,
+            String prenom,
+            String telephone,
+            String role) {
     }
 
-    return ResponseEntity.ok(response);
-}
+    public record LoginRequest(
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Email String email,
+            @jakarta.validation.constraints.NotBlank String password) {
+    }
 
+    public record ResponseDTO(String status, String message, Map<String, Object> data) {
+    }
 }

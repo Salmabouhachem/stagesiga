@@ -1,122 +1,112 @@
 package siga.pfa.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
+import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
-@Table(name = "users")  // Ton nom de table
-public class User {
+@Table(name = "users")
+public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String username;
+
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email must be valid")
+    @Column(unique = true)
     private String email;
+
+    @NotBlank(message = "Password is required")
     private String password;
 
     private String nom;
     private String prenom;
     private String telephone;
 
-    
-
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "user_roles",  // Nom de la table de liaison
+    @JsonIgnore
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+        name = "user_roles",
         joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id"))
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<Role> roles = new HashSet<>();
-     @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "user_centres",
+
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+        name = "user_centres",
         joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "centre_id"))
+        inverseJoinColumns = @JoinColumn(name = "centre_id")
+    )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<Centre> centres = new HashSet<>();
 
-
-    // === Getters and Setters ===
-
-    public Long getId() {
-        return id;
+    // Spring Security methods
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return roles.stream()
+                .map(role -> new SimpleGrantedAuthority(role.getName().name()))
+                .collect(Collectors.toList());
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
+    @Override
     public String getUsername() {
-        return username;
+        return email; // Using email as username
     }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
+    @Override
     public String getPassword() {
         return password;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
     }
 
-    public String getNom() {
-        return nom;
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
     }
 
-    public void setNom(String nom) {
-        this.nom = nom;
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
     }
 
-    public String getPrenom() {
-        return prenom;
+    @Override
+    public boolean isEnabled() {
+        return true;
     }
 
-    public void setPrenom(String prenom) {
-        this.prenom = prenom;
-    }
-
-    public String getTelephone() {
-        return telephone;
-    }
-
-    public void setTelephone(String telephone) {
-        this.telephone = telephone;
-    }
-
-    public Set<Role> getRoles() {
-        return roles;
-    }
-
-    public void setRoles(Set<Role> roles) {
-        this.roles = roles;
-    }
-     public Set<Centre> getCentres() {
-        return centres;
-    }
-
-    public void setCentres(Set<Centre> centres) {
-        this.centres = centres;
-    }
-
-    // Méthode utilitaire pour ajouter un centre
+    // Utility methods for centres
     public void addCentre(Centre centre) {
         this.centres.add(centre);
         centre.getUsers().add(this);
     }
 
-    // Méthode utilitaire pour retirer un centre
     public void removeCentre(Centre centre) {
         this.centres.remove(centre);
         centre.getUsers().remove(this);
     }
 }
-

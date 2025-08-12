@@ -1,18 +1,17 @@
 package siga.pfa.backend.service;
 
-
-import java.util.List;
-
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import siga.pfa.backend.controller.JwtResponse;
+import siga.pfa.backend.controller.LoginRequest;
 import siga.pfa.backend.entity.User;
 import siga.pfa.backend.security.JwtUtils;
-import siga.pfa.backend.controller.LoginRequest;
-import siga.pfa.backend.controller.JwtResponse;
-import siga.pfa.backend.service.AuthService;
+
+import java.util.List;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -26,38 +25,32 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
- public JwtResponse authenticateUser(LoginRequest loginRequest) {
-    // 1. Authentifier avec email et password
-    Authentication authentication = authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(
-            loginRequest.getEmail(),
-            loginRequest.getPassword()
-        )
-    );
+    public JwtResponse authenticateUser(LoginRequest loginRequest) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        loginRequest.getEmail(),
+                        loginRequest.getPassword()
+                )
+        );
 
-    // 2. Stocker dans le contexte
-    SecurityContextHolder.getContext().setAuthentication(authentication);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
-    // 3. Générer le JWT
-    String jwt = jwtUtils.generateToken(authentication);
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String jwt = jwtUtils.generateToken(userDetails);
 
-    // 4. Récupérer les infos utilisateur
-    User user = (User) authentication.getPrincipal(); // ⚠️ Il faut que User implémente UserDetails
+        User user = (User) userDetails;
 
-    // 5. Extraire les rôles
-    List<String> roles = user.getRoles().stream()
-                             .map(role -> role.getName().name())
-                             .toList();
+        List<String> roles = user.getRoles().stream()
+                .map(role -> role.getName().name())
+                .toList();
 
-    // 6. Retourner réponse
-    return new JwtResponse(
-        jwt,
-        user.getEmail(),
-        roles,
-        user.getNom(),
-        user.getPrenom(),
-        user.getTelephone()
-    );
- }
+        return new JwtResponse(
+                jwt,
+                user.getEmail(),
+                roles,
+                user.getNom(),
+                user.getPrenom(),
+                user.getTelephone()
+        );
+    }
 }
-

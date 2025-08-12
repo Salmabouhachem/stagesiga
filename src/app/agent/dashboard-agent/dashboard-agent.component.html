@@ -283,24 +283,32 @@
       <div class="quote-editor-container">
         <form (ngSubmit)="saveQuote()">
           <div class="form-section">
-            <div class="form-row">
+             <div class="form-section">
+      <h3><i class="fas fa-list"></i> Informations du devis de branchement</h3>
+
+      
+        
+         <div class="form-row">
               <div class="form-group">
-                <label>Demande associée *</label>
+                <label>Articles de branchement *</label>
                 <select [(ngModel)]="currentQuote.requestId" name="requestId" required>
                   <option *ngFor="let request of requestsForQuotes" [value]="request.id">
                     #{{ request.id }} - {{ request.clientName }}
                   </option>
                 </select>
               </div>
-              <div class="form-group">
-                <label>Statut *</label>
-                <select [(ngModel)]="currentQuote.status" name="status" required>
-                  <option value="draft">Brouillon</option>
-                  <option value="sent">Envoyé</option>
-                  <option value="approved">Accepté</option>
-                  <option value="rejected">Refusé</option>
-                </select>
-              </div>
+      <div class="form-group">
+        <label>Diamètre de branchement *</label>
+        <input type="text" [(ngModel)]="currentQuote.diametreBranchement" name="diametreBranchement" required />
+      </div>
+
+      <div class="form-group">
+        <label>Calibre de compteur *</label>
+        <input type="text" [(ngModel)]="currentQuote.calibreCompteur" name="calibreCompteur" required />
+      </div>
+    </div>
+            
+              
             </div>
 
             <div class="form-row">

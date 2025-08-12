@@ -1,34 +1,39 @@
-// src/app/admin/centres/centres-list.component.ts
-import { Component, Input } from '@angular/core';
-import { CentreService } from '../../services/center.service';
-import { Centre } from '../../model/centre.model';
+import { Component, Input, OnInit } from '@angular/core';
+import { CentreService, Centre } from '../../services/center.service';
+import { UserService } from '../../services/user.service'; // Assure-toi que ce service existe
+import { User } from '../../model/user.model'; // Assure-toi que le modèle est défini
 
 @Component({
   selector: 'app-centres-list',
   templateUrl: './centres-list.component.html'
-
 })
-export class CentresListComponent {
-  @Input() centres: Centre[] = [];
-  newCentre: Centre = {
-      code: '', name: '', ville: '',
-  };
+export class CentresListComponent implements OnInit {
+ @Input() centres: Centre[] = [];
+  agents: User[] = [];
+  selectedAgentMap: { [centreId: number]: number } = {};
+  message = '';
 
-  constructor(private centerService: CentreService) {
+  constructor(private centreService: CentreService, private userService: UserService) {}
+
+  ngOnInit(): void {
     this.loadCentres();
+    this.loadAgents();
   }
 
-  loadCentres(): void {
-    this.centerService.getCentres().subscribe(centres => {
-      this.centres = centres;
-    });
+  loadCentres() {
+    this.centreService.getAllCentres().subscribe(data => this.centres = data);
   }
 
-  addCentre(): void {
-    if (this.newCentre.code && this.newCentre.name) {
-      this.centerService.createCentre(this.newCentre).subscribe(() => {
-        this.loadCentres();
-        this.newCentre = { code: '', name: '', ville: '' };
+  loadAgents() {
+    this.userService.getAllAgents().subscribe(data => this.agents = data);
+  }
+
+  affecterAgent(centreId: number) {
+    const agentId = this.selectedAgentMap[centreId];
+    if (agentId) {
+      this.centreService.affecterUserToCentre(centreId, agentId).subscribe({
+        next: () => this.message = `Agent affecté avec succès au centre ${centreId}`,
+        error: err => this.message = `Erreur: ${err.error.message}`
       });
     }
   }

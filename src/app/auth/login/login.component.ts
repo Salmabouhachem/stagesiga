@@ -47,19 +47,25 @@ export class LoginComponent {
 
   private handleLoginSuccess(response: any): void {
   this.isLoading = false;
-
-  if (response.token) {
+    console.log("*****",response.data.token);
+    
+  if (response.data.token) {
     // Stockage du token - même si tu veux éviter localStorage, tu peux stocker en mémoire dans un service
-    localStorage.setItem('auth_token', response.token);
+    localStorage.setItem('auth_token', response.data.token);
   }
 
-  if (response.user) {
-    localStorage.setItem('currentUser', JSON.stringify(response.user));
+  if (response.data.user) {
+const userToStore = {
+    ...response.data.user,
+    role: response.data.role,
+  };
+  localStorage.setItem('currentUser', JSON.stringify(userToStore));    
   }
 
   // Récupérer le rôle depuis la réponse (à adapter selon le format exact)
-  const role = response.role || (response.user?.role) || '';
-
+  const role = response.data.role || '';
+  console.log(role);
+  
   const redirectUrl = this.getRedirectUrl(role);
   this.router.navigate([redirectUrl]);
 }

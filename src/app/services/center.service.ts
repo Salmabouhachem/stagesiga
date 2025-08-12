@@ -1,26 +1,32 @@
-// src/app/services/centre.service.ts
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Centre } from '../model/centre.model';
+
+export interface Centre {
+  id?: number;
+  code: string;
+  nom: string;
+  ville: string;
+  adresse: string;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class CentreService {
-  private apiUrl = 'http://localhost:8080/api/centres';
+  private baseUrl = 'http://localhost:8080/api/centres';
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
-  getCentres(): Observable<Centre[]> {
-    return this.http.get<Centre[]>(this.apiUrl);
+  getAllCentres(): Observable<Centre[]> {
+    return this.http.get<Centre[]>(this.baseUrl);
   }
 
   createCentre(centre: Centre): Observable<Centre> {
-    return this.http.post<Centre>(this.apiUrl, centre);
+    return this.http.post<Centre>(this.baseUrl, centre);
   }
 
-  affecterUser(userId: number, centreId: number): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/${centreId}/affecter/${userId}`, {});
+  affecterUserToCentre(centreId: number, userId: number): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${centreId}/affecter/${userId}`, {});
   }
 }

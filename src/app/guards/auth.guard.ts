@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, Router, UrlTree } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { Observable, of } from 'rxjs';
-import { mergeMap, take, tap } from 'rxjs/operators';
+import { catchError, mergeMap, take, tap } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -13,44 +13,52 @@ export class AuthGuard implements CanActivate {
     private router: Router
   ) {}
 
-  canActivate(
-    route: ActivatedRouteSnapshot,
-    state: RouterStateSnapshot
-  ): Observable<boolean | UrlTree> {
-    return this.authService.isLoggedIn().pipe(
-      take(1),
-      mergeMap(isLoggedIn => {
-        console.log('=== Debug AuthGuard ===');
-        console.log('URL demandée:', state.url);
-        console.log('Utilisateur connecté:', isLoggedIn);
+canActivate(
+  route: ActivatedRouteSnapshot,
+  state: RouterStateSnapshot
+): Observable<boolean | UrlTree> {
 
-        if (!isLoggedIn) {
-          console.warn('Redirection vers login - Non authentifié');
-          return of(this.router.createUrlTree(['/login'], {
-            queryParams: { returnUrl: state.url }
-          }));
-        }
+  // Get the user from localStorage (synchronously)
+  const userJson = localStorage.getItem('currentUser');
+  let user: any = null;
 
-        const requiredRoles = route.data['roles'] as string[];
-        if (!requiredRoles || requiredRoles.length === 0) {
-          return of(true);
-        }
-
-        return this.authService.hasAnyRole(requiredRoles).pipe(
-          take(1),
-          tap(hasRole => {
-            console.log('Rôles utilisateur:', this.authService.getCurrentUserRole());
-            console.log('Rôles requis:', requiredRoles);
-          }),
-          mergeMap(hasRole => {
-            if (!hasRole) {
-              console.warn('Redirection vers accès refusé - Rôles insuffisants');
-              return of(this.router.createUrlTree(['/access-denied']));
-            }
-            return of(true);
-          })
-        );
-      })
-    );
+  if (userJson) {
+    user = JSON.parse(userJson);
   }
+
+  if (!user) {
+    console.warn('AuthGuard: No user found in localStorage, redirecting to login');
+    return of(this.router.createUrlTree(['/login'], {
+      queryParams: { returnUrl: state.url }
+    }));
+  }
+
+  const normalizeRole = (role: string) => role.toUpperCase().replace(/^ROLE_/, '');
+
+  const requiredRoles = (route.data['roles'] as string[] || []).map(normalizeRole);
+  if (requiredRoles.length === 0) return of(true);
+
+  const userRoles = (Array.isArray(user.authorities) && user.authorities.length > 0) 
+    ? user.authorities.map((a: any) => a.authority)
+    : (user.role ? [user.role] : []);
+
+  const hasAccess = requiredRoles.some(required =>
+    userRoles.some((userRole: string) =>
+      userRole.toUpperCase() === required.toUpperCase() ||
+      userRole.toUpperCase() === 'ROLE_' + required.toUpperCase()
+    )
+  );
+
+  console.log('User roles:', userRoles);
+  console.log('Required roles:', requiredRoles);
+
+  if (!hasAccess) {
+    console.warn('AuthGuard: Access denied for roles', requiredRoles);
+    return of(this.router.parseUrl('/access-denied'));
+  }
+
+  return of(true);
+}
+
+
 }

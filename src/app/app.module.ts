@@ -19,6 +19,10 @@ import { AgentDashboardComponent } from './agent/dashboard-agent/dashboard-agent
 import { CentresListComponent } from './admin/centres/centres-list.component';
 import { UsersListComponent } from './admin/users/users-list.component';
 import { RouterModule } from '@angular/router';
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { AuthInterceptor } from './interceptors/auth.interceptor';
+import { JwtInterceptor } from './interceptors/jwt.interceptor';
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -46,7 +50,8 @@ import { RouterModule } from '@angular/router';
     RouterModule.forRoot([])
   ],
   providers: [
-    provideAnimationsAsync()
+    provideAnimationsAsync(),
+    { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true ,}
   ],
   bootstrap: [AppComponent]
 })

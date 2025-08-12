@@ -33,8 +33,12 @@ interface Quote {
   status: 'draft' | 'sent' | 'approved' | 'rejected';
   description: string;
   currency: string;
-}
 
+  // Champs spécifiques devis branchement
+  articlesBranchement?: string;
+  diametreBranchement?: string;
+  calibreCompteur?: string;
+}
 interface Center {
   id: number;
   name: string;
@@ -233,11 +237,16 @@ loadAgentInfo(): void {
   }
 
   saveQuote(): void {
-    // Validation
-    if (!this.currentQuote.requestId || this.currentQuote.amount <= 0) {
-      alert('Veuillez sélectionner une demande et spécifier un montant valide');
-      return;
-    }
+  if (
+    !this.currentQuote.requestId ||
+    !this.currentQuote.articlesBranchement ||
+    !this.currentQuote.diametreBranchement ||
+    !this.currentQuote.calibreCompteur ||
+    this.currentQuote.amount <= 0
+  ) {
+    alert('Veuillez remplir tous les champs obligatoires du devis.');
+    return;
+  }
 
     const request = this.allRequests.find(r => r.id === this.currentQuote.requestId);
     if (!request) {
@@ -287,20 +296,24 @@ loadAgentInfo(): void {
   }
 
   createEmptyQuote(): Quote {
-    return {
-      id: 0,
-      requestId: 0,
-      clientId: '',
-      clientName: '',
-      agentId: this.agentId,
-      centerId: this.currentCenter?.id || 0,
-      amount: 0,
-      date: new Date().toISOString().split('T')[0],
-      status: 'draft',
-      description: '',
-      currency: 'TND'
-    };
-  }
+  return {
+    id: 0,
+    requestId: 0,
+    clientId: '',
+    clientName: '',
+    agentId: this.agentId,
+    centerId: this.currentCenter?.id || 0,
+    amount: 0,
+    date: new Date().toISOString().split('T')[0],
+    status: 'draft',
+    description: '',
+    currency: 'TND',
+    articlesBranchement: '',
+    diametreBranchement: '',
+    calibreCompteur: ''
+  };
+}
+
 
   getStatusLabel(status: string): string {
     switch (status) {

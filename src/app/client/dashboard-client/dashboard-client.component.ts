@@ -3,6 +3,9 @@ import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ClientService } from '../../services/client.service';
+
 
 type DemandeStatus = 'new' | 'in-progress' | 'completed';
 type QuoteStatus = 'pending' | 'approved' | 'rejected';
@@ -102,7 +105,8 @@ export class ClientDashboardComponent implements OnInit {
   constructor(
     private authService: AuthService,
     private router: Router,
-    private http: HttpClient
+    private http: HttpClient,
+    private clientService: ClientService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -146,7 +150,7 @@ export class ClientDashboardComponent implements OnInit {
 
     try {
       await lastValueFrom(
-        this.http.put(`/api/demandes/${this.selectedDemande.id}`, this.selectedDemande)
+        this.http.put(`/api/demandes/interventions${this.selectedDemande.id}`, this.selectedDemande)
       );
       this.loadClientData();
       this.currentSection = 'mes-demandes';
@@ -180,11 +184,21 @@ export class ClientDashboardComponent implements OnInit {
   private async loadClientInfo(): Promise<void> {
     try {
       const user = await lastValueFrom(this.authService.getCurrentUser());
-      this.clientEmail = user?.email || '';
-      this.clientName = user?.name || user?.email?.split('@')[0] || 'Client';
-      this.demande.email = this.clientEmail;
+      console.log('User data received:', user); // Debug important
+      
+      if (user) {
+        this.clientEmail = user.email || '';
+        this.clientName = user.name || 'Client';
+        this.demande.email = this.clientEmail;
+        
+        console.log('Client initialized:', {
+          name: this.clientName,
+          email: this.clientEmail
+        });
+      }
     } catch (error) {
-      this.handleError(error, 'Chargement des infos client');
+      console.error('Failed to load user info:', error);
+      this.clientName = 'Client';
     }
   }
 
@@ -199,7 +213,7 @@ export class ClientDashboardComponent implements OnInit {
       const [requests, quotes, demandes] = await Promise.all([
         lastValueFrom(this.http.get<Request[]>('/api/requests')),
         lastValueFrom(this.http.get<Quote[]>('/api/quotes')),
-        lastValueFrom(this.http.get<DemandeBranchement[]>('/api/demandes'))
+        lastValueFrom(this.http.get<DemandeBranchement[]>('/api/demandes/interventions'))
       ]);
 
       this.myRequests = [...requests, ...demandes]
@@ -226,29 +240,27 @@ export class ClientDashboardComponent implements OnInit {
   }
 
   async submitDemande(): Promise<void> {
-    if (!this.validateDemande(this.demande)) {
-      return;
-    }
-
-    try {
-      const demandeToSend: DemandeBranchement = {
-        ...this.demande,
-        id: 0, // Le backend générera l'ID
-        client: this.clientEmail,
-        date: new Date().toISOString().split('T')[0],
-        status: 'new'
-      };
-
-      await lastValueFrom(this.http.post('/api/demandes', demandeToSend));
-      
-      this.loadClientData();
-      this.currentSection = 'dashboard';
-      this.resetDemandeForm();
-      this.showSuccessAlert('Demande soumise avec succès');
-    } catch (error) {
-      this.handleError(error, 'Soumission de demande');
-    }
+  if (!this.validateDemande(this.demande)) {
+    return;
   }
+
+  try {
+    const demandeToSend = {
+      ...this.demande,
+      client: this.clientEmail,
+      date: new Date().toISOString(),
+      status: 'new'
+    };
+
+    await lastValueFrom(this.clientService.submitIntervention(demandeToSend));
+
+    this.loadClientData();
+    this.showSuccessAlert('Demande envoyée avec succès');
+    this.resetDemandeForm();
+  } catch (error) {
+    this.handleError(error, 'Envoi de demande');
+  }
+}
 
   private validateDemande(demande: any): boolean {
     const requiredFields = ['nom', 'prenom', 'email', 'cin', 'telephone', 'adresse'];
@@ -313,11 +325,11 @@ export class ClientDashboardComponent implements OnInit {
   }
 
   logout(): void {
-    this.authService.logout().subscribe({
-      next: () => this.router.navigate(['/login']),
-      error: (err) => this.handleError(err, 'Déconnexion')
-    });
-  }
+  this.authService.logout().subscribe({
+    next: () => this.router.navigate(['/login']),
+    error: (err: HttpErrorResponse) => this.handleError(err, 'Déconnexion')
+  });
+}
   // Dans ClientDashboardComponent
 getStatusLabel(status: string): string {
   switch (status) {

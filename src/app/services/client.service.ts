@@ -6,7 +6,7 @@ import { Observable, catchError, throwError } from 'rxjs';
   providedIn: 'root'
 })
 export class ClientService {
-  private apiUrl = '/api/demandes/interventions';
+  private apiUrl = 'http://localhost:8080/api/demandes/interventions';
 
   constructor(private http: HttpClient) {}
 

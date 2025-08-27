@@ -18,9 +18,9 @@
       <td>{{ centre.ville }}</td>
       <td>{{ centre.adresse }}</td>
       <td>
-        <select [(ngModel)]="selectedAgentMap[centre.id!]">
+        <select [(ngModel)]="selectedAgentMap[centre.id!]" (change)="message = ''">
           <option [value]="null" disabled selected>Choisir un agent</option>
-          <option *ngFor="let agent of agents" [value]="agent.id">{{ agent.prenom }}</option>
+          <option *ngFor="let agent of agents" [value]="agent.id">{{ agent.prenom }} {{ agent.nom }}</option>
         </select>
         <button (click)="affecterAgent(centre.id!)">Affecter</button>
       </td>

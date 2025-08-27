@@ -6,7 +6,7 @@
     <label>Filtrer par centre :</label>
     <select [(ngModel)]="selectedCenter" (change)="filterByCenter()">
       <option [value]="null">Tous les centres</option>
-      <option *ngFor="let center of centers" [value]="center.id">{{ center.name }}</option>
+      <option *ngFor="let center of centers" [value]="center.id">{{ center.nom }}</option>
     </select>
   </div>
 
@@ -26,7 +26,7 @@
         <td>{{ user.nom }} {{ user.prenom }}</td>
         <td>{{ user.email }}</td>
         <td>{{ user.role }}</td>
-        <td>{{ getCenterNames(user) }}</td>
+        <td>{{ user.centres}}</td>
         <td *ngIf="isAdmin()">
           <button (click)="prepareAssignment(user)">Affecter</button>
         </td>
@@ -40,7 +40,7 @@
       <h4>Affecter {{ userToAssign.nom }} à un centre</h4>
       <select [(ngModel)]="centerToAssign">
         <option [value]="null">-- Sélectionner un centre --</option>
-        <option *ngFor="let center of centers" [value]="center.id">{{ center.name }}</option>
+        <option *ngFor="let center of centers" [value]="center.id">{{ center.nom }}</option>
       </select>
       <div class="modal-actions">
         <button (click)="assignUserToCenter()">Confirmer</button>

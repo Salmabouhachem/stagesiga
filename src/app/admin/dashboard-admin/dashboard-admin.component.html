@@ -4,6 +4,9 @@
     <div class="logo">Admin Panel</div>
     <nav>
       <ul>
+        <li [class.active]="currentView === 'dashboard'" (click)="changeView('dashboard')">
+          <i class="fas fa-tachometer-alt"></i> Tableau de bord
+        </li>
         <li [class.active]="currentView === 'stats'" (click)="changeView('stats')">
           <i class="fas fa-chart-bar"></i> Statistiques
         </li>
@@ -13,12 +16,45 @@
         <li [class.active]="currentView === 'users'" (click)="changeView('users')">
           <i class="fas fa-users"></i> Utilisateurs
         </li>
+        <li class="logout" (click)="logout()">
+          <i class="fas fa-sign-out-alt"></i> Déconnexion
+        </li>
       </ul>
     </nav>
   </div>
 
   <!-- Main Content -->
   <div class="main-content">
+    <div *ngIf="currentView === 'dashboard'" class="dashboard-view">
+      <h2>Bonjour, {{ adminName }}</h2>
+      <div class="status-grid">
+        <div class="status-card">
+          <h3>Demandes actives</h3>
+          <p>{{ todayRequests }}</p>
+          <span>Aucune demande active</span>
+        </div>
+        <div class="status-card">
+          <h3>Devis en attente</h3>
+          <p>{{ pendingQuotes }}</p>
+          <span>Aucun devis en attente</span>
+        </div>
+        <div class="status-card">
+          <h3>Demandes terminées</h3>
+          <p>{{ completedDemandes }}</p>
+          <span>Aucune demande terminée</span>
+        </div>
+      </div>
+      <div class="recent-requests">
+        <h3>Mes dernières demandes</h3>
+        <p *ngIf="requests.length === 0">Vous n'avez aucune demande</p>
+        <ul>
+          <li *ngFor="let request of requests.slice(0, 5)">
+            {{ request.client }} - {{ request.date }} ({{ request.status }})
+          </li>
+        </ul>
+      </div>
+    </div>
+
     <div *ngIf="currentView === 'stats'" class="stats-view">
       <div class="stats-grid">
         <div class="stat-card">
@@ -44,18 +80,4 @@
       <app-users-list [users]="users"></app-users-list>
     </div>
   </div>
-  <div class="admin-container">
-  <div class="sidebar">
-    <h2>Administration</h2>
-    <nav>
-      <button (click)="navigateTo('centres')" [class.active]="activeTab === 'centres'">
-        Gestion des Centres
-      </button>
-      <button (click)="navigateTo('users')" [class.active]="activeTab === 'users'">
-        Gestion des Utilisateurs
-      </button>
-    </nav>
-  </div>
-<router-outlet></router-outlet>
-
 </div>

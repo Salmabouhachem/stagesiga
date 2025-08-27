@@ -14,12 +14,15 @@ export interface Centre {
   providedIn: 'root'
 })
 export class CentreService {
+  getUsers() {
+    throw new Error('Method not implemented.');
+  }
   private baseUrl = 'http://localhost:8080/api/centres';
 
   constructor(private http: HttpClient) {}
 
   getAllCentres(): Observable<Centre[]> {
-    return this.http.get<Centre[]>(this.baseUrl);
+    return this.http.get<Centre[]>(`${this.baseUrl}`);
   }
 
   createCentre(centre: Centre): Observable<Centre> {

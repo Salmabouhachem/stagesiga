@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ClientService } from '../../services/client.service';
+import { DataPersistenceService } from 'src/app/services/dataPersistence.service';
 
 
 type DemandeStatus = 'new' | 'in-progress' | 'completed';
@@ -48,8 +49,8 @@ interface DemandeBranchement {
   adresse: string;
   latitude: number;
   longitude: number;
-  natureClient: 'particulier' | 'entreprise' | 'administration' | 'autre';
-  usage: 'domestique' | 'commercial' | 'industriel' | 'agricole';
+  natureClient: 'PARTICULIER' | 'ENTREPRISE' | 'ADMINISTRATION' | 'AUTRE';
+  usage: 'DOMESTIQUE' | 'COMMERCIAL' | 'INDUSTRIEL' | 'AGRICOLE';
 }
 
 @Component({
@@ -59,7 +60,7 @@ interface DemandeBranchement {
 })
 export class ClientDashboardComponent implements OnInit {
   currentSection = 'dashboard';
-  clientName = '';
+  clientName = 'Chargement...';
   clientEmail = '';
   showRequestForm = false;
   
@@ -84,35 +85,52 @@ export class ClientDashboardComponent implements OnInit {
     adresse: '',
     latitude: 0,
     longitude: 0,
-    natureClient: 'particulier',
-    usage: 'domestique'
+    natureClient: 'PARTICULIER',
+    usage: 'DOMESTIQUE'
   };
 
   natureClientOptions = [
-    { value: 'particulier', label: 'Particulier' },
-    { value: 'entreprise', label: 'Entreprise' },
-    { value: 'administration', label: 'Administration' },
-    { value: 'autre', label: 'Autre' }
+    { value: 'PARTICULIER', label: 'Particulier' },
+    { value: 'ENTREPRISE', label: 'Entreprise' },
+    { value: 'ADMINISTRATION', label: 'Administration' },
+    { value: 'AUTRE', label: 'Autre' }
   ];
 
   usageOptions = [
-    { value: 'domestique', label: 'Domestique' },
-    { value: 'commercial', label: 'Commercial' },
-    { value: 'industriel', label: 'Industriel' },
-    { value: 'agricole', label: 'Agricole' }
+    { value: 'DOMESTIQUE', label: 'Domestique' },
+    { value: 'COMMERCIAL', label: 'Commercial' },
+    { value: 'INDUSTRIEL', label: 'Industriel' },
+    { value: 'AGRICOLE', label: 'Agricole' }
   ];
 
   constructor(
     private authService: AuthService,
     private router: Router,
     private http: HttpClient,
-    private clientService: ClientService
+    private clientService: ClientService,
+    private cdr: ChangeDetectorRef,
+    private dataService: DataPersistenceService
   ) {}
 
   async ngOnInit(): Promise<void> {
-    await this.loadClientInfo();
+    this.loadClientInfo();
     this.loadClientData();
+    
+    // Check if data exists in service before loading
+    const cachedData = this.dataService.getClientData();
+    if (cachedData) {
+      this.useCachedData(cachedData);
+    } else {
+      this.loadClientData();
+    }
+    
     this.prefillClientInfo();
+  }
+
+  private useCachedData(data: any): void {
+    this.myRequests = data.requests;
+    this.myQuotes = data.quotes;
+    this.updateStatistics();
   }
 
   // Méthodes pour gérer les demandes
@@ -134,8 +152,8 @@ export class ClientDashboardComponent implements OnInit {
         adresse: '',
         latitude: 0,
         longitude: 0,
-        natureClient: 'particulier',
-        usage: 'domestique'
+        natureClient: 'PARTICULIER',
+        usage: 'DOMESTIQUE'
       };
     }
     this.currentSection = 'demande-details';
@@ -150,16 +168,19 @@ export class ClientDashboardComponent implements OnInit {
 
     try {
       await lastValueFrom(
-        this.http.put(`/api/demandes/interventions${this.selectedDemande.id}`, this.selectedDemande)
+        this.http.put(`http://localhost:8080/api/demandes/interventions/${this.selectedDemande.id}`, this.selectedDemande)
       );
-      this.loadClientData();
+      
+      // Clear cache to force reload
+      this.dataService.clearClientData();
+      await this.loadClientData();
+      
       this.currentSection = 'mes-demandes';
       this.showSuccessAlert('Informations mises à jour');
     } catch (error) {
       this.handleError(error, 'Erreur lors de la mise à jour');
     }
   }
-
   async getCurrentPosition(): Promise<void> {
     try {
       const position = await this.getGeolocation();
@@ -184,36 +205,40 @@ export class ClientDashboardComponent implements OnInit {
   private async loadClientInfo(): Promise<void> {
     try {
       const user = await lastValueFrom(this.authService.getCurrentUser());
-      console.log('User data received:', user); // Debug important
-      
+      console.log('User data received:', user); // Debug the received user object
+
       if (user) {
         this.clientEmail = user.email || '';
-        this.clientName = user.name || 'Client';
+        this.clientName = user.name || user.nom || user.email.split('@')[0] || 'Client'; // Fallback to email username
         this.demande.email = this.clientEmail;
-        
+
         console.log('Client initialized:', {
           name: this.clientName,
           email: this.clientEmail
         });
+      } else {
+        this.clientName = 'Client';
       }
+      this.cdr.detectChanges(); // Manually trigger change detection
     } catch (error) {
       console.error('Failed to load user info:', error);
       this.clientName = 'Client';
+      this.cdr.detectChanges(); // Trigger change detection on error too
     }
   }
-
   private prefillClientInfo(): void {
     const nameParts = this.clientName.split(' ');
     this.demande.nom = nameParts[0] || '';
     this.demande.prenom = nameParts.slice(1).join(' ') || '';
   }
 
-  private async loadClientData(): Promise<void> {
+ private async loadClientData(): Promise<void> {
     try {
+      console.log('Loading client data from API...');
       const [requests, quotes, demandes] = await Promise.all([
-        lastValueFrom(this.http.get<Request[]>('/api/requests')),
-        lastValueFrom(this.http.get<Quote[]>('/api/quotes')),
-        lastValueFrom(this.http.get<DemandeBranchement[]>('/api/demandes/interventions'))
+        lastValueFrom(this.http.get<Request[]>('http://localhost:8080/api/requests')),
+        lastValueFrom(this.http.get<Quote[]>('http://localhost:8080/api/quotes')),
+        lastValueFrom(this.http.get<DemandeBranchement[]>('http://localhost:8080/api/demandes/interventions'))
       ]);
 
       this.myRequests = [...requests, ...demandes]
@@ -222,9 +247,24 @@ export class ClientDashboardComponent implements OnInit {
 
       this.myQuotes = quotes.filter(quote => quote.client === this.clientEmail);
 
+      // Store data in service with client email for validation
+      this.dataService.setClientData({
+        clientEmail: this.clientEmail,
+        requests: this.myRequests,
+        quotes: this.myQuotes
+      });
+
       this.updateStatistics();
+      console.log('Data loaded successfully', this.myRequests.length, 'requests', this.myQuotes.length, 'quotes');
     } catch (error) {
+      console.error('Error loading client data:', error);
       this.handleError(error, 'Chargement des données');
+      
+      // If API fails, try to use cached data as fallback
+      const cachedData = this.dataService.getClientData();
+      if (cachedData) {
+        this.useCachedData(cachedData);
+      }
     }
   }
 
@@ -240,27 +280,32 @@ export class ClientDashboardComponent implements OnInit {
   }
 
   async submitDemande(): Promise<void> {
-  if (!this.validateDemande(this.demande)) {
-    return;
+    if (!this.validateDemande(this.demande)) {
+      return;
+    }
+
+    try {
+      const demandeToSend = {
+        ...this.demande,
+        client: this.clientEmail,
+        date: new Date().toISOString(),
+        status: 'PENDING', 
+        natureClient: this.demande.natureClient.toUpperCase(), 
+        usage: this.demande.usage.toUpperCase()
+      };
+
+      await lastValueFrom(this.clientService.submitIntervention(demandeToSend));
+
+      // Clear cache to force reload
+      this.dataService.clearClientData();
+      await this.loadClientData();
+      
+      this.showSuccessAlert('Demande envoyée avec succès');
+      this.resetDemandeForm();
+    } catch (error) {
+      this.handleError(error, 'Envoi de demande');
+    }
   }
-
-  try {
-    const demandeToSend = {
-      ...this.demande,
-      client: this.clientEmail,
-      date: new Date().toISOString(),
-      status: 'new'
-    };
-
-    await lastValueFrom(this.clientService.submitIntervention(demandeToSend));
-
-    this.loadClientData();
-    this.showSuccessAlert('Demande envoyée avec succès');
-    this.resetDemandeForm();
-  } catch (error) {
-    this.handleError(error, 'Envoi de demande');
-  }
-}
 
   private validateDemande(demande: any): boolean {
     const requiredFields = ['nom', 'prenom', 'email', 'cin', 'telephone', 'adresse'];
@@ -284,8 +329,8 @@ export class ClientDashboardComponent implements OnInit {
       adresse: '',
       latitude: 0,
       longitude: 0,
-      natureClient: 'particulier',
-      usage: 'domestique'
+      natureClient: 'PARTICULIER',
+      usage: 'DOMESTIQUE'
     };
   }
 

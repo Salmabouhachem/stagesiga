@@ -25,7 +25,7 @@
     <!-- Tableau de bord Agent -->
     <section *ngIf="currentSection === 'dashboard'">
       <h1>Bonjour, {{ agentName }}</h1>
-      <p class="center-info">Centre: {{ currentCenter?.name || 'Non affecté' }}</p>
+      <p class="center-info">Centre: {{ currentCenterName || 'Non affecté' }}</p>
       
       <div class="stats-grid">
         <div class="stat-card">

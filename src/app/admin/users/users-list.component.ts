@@ -15,9 +15,9 @@ export class UsersListComponent {
   centers: Centre[] = [];
   selectedCenter?: number;
   userToAssign: User | null = null;
-  centerToAssign: number | null | undefined =null;
+  centerToAssign: number | null = null;
 
-  constructor(private apiService: ApiService ,private authService: AuthService) {
+  constructor(private apiService: ApiService, private authService: AuthService) {
     this.loadCenters();
   }
 
@@ -34,40 +34,42 @@ export class UsersListComponent {
         next: (users) => this.users = users,
         error: (err) => console.error(err)
       });
+    } else {
+      this.apiService.getUsers().subscribe({
+        next: (users) => this.users = users,
+        error: (err) => console.error(err)
+      });
     }
   }
 
- prepareAssignment(selectedUser: User): void {
-  this.userToAssign = selectedUser;
-  this.centerToAssign = selectedUser.centres?.[0]?.id || null;
-}
-
-  assignUserToCenter(): void {
-  if (!this.userToAssign?.id || !this.centerToAssign) {
-    console.error('ID utilisateur ou centre manquant');
-    return;
+  prepareAssignment(selectedUser: User): void {
+    this.userToAssign = selectedUser;
+    this.centerToAssign = selectedUser.centres?.[0]?.id || null;
   }
 
-  this.apiService.assignUserToCenter(
-    this.userToAssign.id, // Garanti d'être un number
-    this.centerToAssign   // Garanti d'être un number
-  ).subscribe({
-    next: () => {
-      this.filterByCenter();
-      this.userToAssign = null;
-    },
-    error: (err) => console.error(err)
-  });
-}
+  assignUserToCenter(): void {
+    if (!this.userToAssign?.id || !this.centerToAssign) {
+      console.error('ID utilisateur ou centre manquant');
+      return;
+    }
+
+    this.apiService.assignUserToCenter(this.userToAssign.id, this.centerToAssign).subscribe({
+      next: () => {
+      this.loadCenters();
+        this.userToAssign = null;
+      },
+      error: (err) => console.error(err)
+    });
+  }
+
   isAdmin(): Observable<boolean> {
-  return this.authService.getCurrentUserRole().pipe(
-    map(role => role === 'ADMIN'),
-    catchError(() => of(false)) // Gestion des erreurs
-  );
-}
+    return this.authService.getCurrentUserRole().pipe(
+      map(role => role === 'ADMIN'),
+      catchError(() => of(false))
+    );
+  }
+
   getCenterNames(user: User): string {
-    // Implement your logic to get center names from the user object
-    // For example:
-    return user.centres?.map(center => center.name).join(', ') || '';
+    return user.centres?.map(center => center.name).join(', ') || 'Aucun centre';
   }
 }

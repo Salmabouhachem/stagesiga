@@ -24,11 +24,10 @@
               "src/favicon.ico",
               "src/assets"
             ],
-          "styles": [
-  "node_modules/bootstrap/dist/css/bootstrap.min.css",
-  "src/styles.css"
-],
-
+            "styles": [
+              "node_modules/bootstrap/dist/css/bootstrap.min.css",
+              "src/styles.css"
+            ],
             "scripts": []
           },
           "configurations": {
@@ -60,6 +59,9 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "browserTarget": "stage:build"   
+          },
           "configurations": {
             "production": {
               "browserTarget": "stage:build:production"

@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../services/api.service';
+import { Centre } from 'src/app/model/centre.model';
 
 interface Request {
   id: number;
@@ -62,7 +63,8 @@ export class AgentDashboardComponent implements OnInit {
   currentSection = 'dashboard';
   agentName = '';
   agentId = '';
-  currentCenter: Center | null = null;
+  currentCenter: Centre | null = null;
+  agentCenters:  Centre[] = [];
   statusFilter = 'all';
 
   // Statistiques
@@ -81,6 +83,8 @@ export class AgentDashboardComponent implements OnInit {
   selectedRequest: Request | null = null;
   currentQuote: Quote = this.createEmptyQuote();
   isEditingQuote = false;
+   currentCenterName = null;
+  currentUser: any;
 
   constructor(
     private authService: AuthService,
@@ -90,6 +94,17 @@ export class AgentDashboardComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+  const currentUserStr = localStorage.getItem("currentUser");
+
+  if (currentUserStr) {
+    try {
+      this.currentUser = JSON.parse(currentUserStr);
+      this.currentCenterName = this.currentUser?.centres[0] || null;
+    } catch (error) {
+      console.error('Error parsing user data from localStorage:', error);
+      this.currentCenterName = null;
+    }
+  }
     this.loadAgentInfo();
     this.loadAgentData();
   }
@@ -98,14 +113,12 @@ loadAgentInfo(): void {
   this.authService.getCurrentUser().subscribe({
     next: (user) => {
       this.agentName = user?.name || 'Agent';
-      this.agentId = user?.id || '';
-      this.currentCenter = { id: 1, name: 'Centre Principal' };
-    },
+      this.agentId = this.currentUser?.id || '';
+    this.agentCenters = user?.centres || [];    },
     error: (err) => {
       console.error('Erreur lors du chargement des infos agent', err);
       this.agentName = 'Agent';
       this.agentId = '';
-      this.currentCenter = { id: 1, name: 'Centre Principal' };
     }
   });
 }

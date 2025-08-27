@@ -7,6 +7,9 @@ import { BehaviorSubject, Observable, catchError, map, mergeMap, of, tap, throwE
   providedIn: 'root'
 })
 export class AuthService {
+  navigate(arg0: string[]): void {
+    throw new Error('Method not implemented.');
+  }
    private currentUserSubject = new BehaviorSubject<any>(null); // Initialisation correcte
   private readonly apiUrl = 'http://localhost:8080/api/auth';
   private readonly roleRoutes: { [key: string]: string } = {
@@ -81,13 +84,13 @@ getCurrentUser(): Observable<any> {
 
 
   // Récupère le rôle de l'utilisateur depuis le backend
-  getCurrentUserRole(): Observable<string> {
+  // auth.service.ts
+getCurrentUserRole(): Observable<string> {
     return this.getCurrentUser().pipe(
-      map(user => user?.roles?.[0] || ''),
-      catchError(() => of(''))
+      map(user => user?.roles?.[0] || 'USER'),
+      catchError(() => of('USER'))
     );
   }
-
   // Vérification des rôles
   hasRole(requiredRole: string): Observable<boolean> {
     return this.getCurrentUser().pipe(

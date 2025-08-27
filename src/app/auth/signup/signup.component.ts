@@ -30,7 +30,7 @@ export class SignupComponent implements OnInit {
       prenom: ['', [Validators.required, Validators.maxLength(50)]],
       email: ['', [Validators.required, Validators.email]],
       telephone: ['', [Validators.required, Validators.pattern(/^\+?\d{1,3}[\s.-]?\d{2,3}[\s.-]?\d{3}[\s.-]?\d{3}$/)]],
-      role: ['CLIENT', Validators.required],
+      role: ['ROLE_CLIENT', Validators.required],
       password: ['', [Validators.required, Validators.minLength(8), Validators.pattern(/^(?=.*[A-Z])(?=.*\d).+$/)]],
       confirmPassword: ['', Validators.required]
     }, { validators: this.passwordMatchValidator });

@@ -8,6 +8,9 @@ import { Centre } from '../model/centre.model';
   providedIn: 'root'
 })
 export class ApiService {
+  getRequests() {
+    throw new Error('Method not implemented.');
+  }
   private apiUrl = 'http://localhost:8080/api'; // URL de votre backend
 
   constructor(private http: HttpClient) { }
@@ -30,29 +33,28 @@ export class ApiService {
 
   // CENTRES
   getCenters(): Observable<Centre[]> {
-    return this.http.get<Centre[]>(`${this.apiUrl}/centers`)
+    return this.http.get<Centre[]>(`${this.apiUrl}/centres`)
       .pipe(catchError(this.handleError));
   }
 
   createCenter(center: Centre): Observable<Centre> {
-    return this.http.post<Centre>(`${this.apiUrl}/centers`, center)
+    return this.http.post<Centre>(`${this.apiUrl}/centres`, center)
       .pipe(catchError(this.handleError));
   }
 
   // UTILISATEURS
   getUsers(): Observable<User[]> {
-    return this.http.get<User[]>(`${this.apiUrl}/users`)
+    return this.http.get<User[]>(`${this.apiUrl}/users/agents`) // Match the backend endpoint
       .pipe(catchError(this.handleError));
   }
-
   getUsersByCenter(centerId: number): Observable<User[]> {
-    return this.http.get<User[]>(`${this.apiUrl}/centers/${centerId}/users`)
+    return this.http.get<User[]>(`${this.apiUrl}/centres/${centerId}/users`)
       .pipe(catchError(this.handleError));
   }
 
   assignUserToCenter(userId: number, centerId: number): Observable<void> {
     return this.http.post<void>(
-      `${this.apiUrl}/users/${userId}/centers/${centerId}`, 
+      `${this.apiUrl}/centres/${centerId}/affecter/${userId}`, 
       {}
     ).pipe(catchError(this.handleError));
   }

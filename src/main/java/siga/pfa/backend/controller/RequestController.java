@@ -12,7 +12,7 @@ import siga.pfa.backend.service.RequestService;
 
 @RestController
 @RequestMapping("/api/requests")
-@CrossOrigin(origins = "http://localhost:64095")
+@CrossOrigin(origins = "http://localhost:4200")
 public class RequestController {
     private final RequestService requestService;
 

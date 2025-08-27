@@ -51,6 +51,7 @@ public class User implements UserDetails {
     @EqualsAndHashCode.Exclude
     private Set<Role> roles = new HashSet<>();
 
+    @JsonIgnore
     @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
         name = "user_centres",
@@ -109,4 +110,9 @@ public class User implements UserDetails {
         this.centres.remove(centre);
         centre.getUsers().remove(this);
     }
+    public Set<String> getSimpleRoles() {
+    return roles.stream()
+            .map(role -> role.getName().name().replace("ROLE_", "")) // ex: ROLE_CLIENT -> CLIENT
+            .collect(Collectors.toSet());
+}
 }

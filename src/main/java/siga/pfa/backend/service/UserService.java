@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import siga.pfa.backend.entity.CustomUserDetails;
 import siga.pfa.backend.entity.User;
 import siga.pfa.backend.entity.Role;
+import siga.pfa.backend.entity.Role.RoleName;
 import siga.pfa.backend.repository.UserRepository;
 
 @Service
@@ -31,6 +32,10 @@ public class UserService implements UserDetailsService {
         // Convertis ton User en UserDetails (voir la classe CustomUserDetails ci-dessous)
         return new CustomUserDetails(user);
     }
+    // UserService.java
+public List<User> getAllUsers() {
+    return userRepository.findAll(); // Adjust based on your repository
+}
 
     // Méthode existante, récupération des agents
     public List<User> getAllAgents() {
@@ -51,5 +56,6 @@ public class UserService implements UserDetailsService {
     public void deleteUser(Long id) {
         userRepository.deleteById(id);
     }
+
 }
 

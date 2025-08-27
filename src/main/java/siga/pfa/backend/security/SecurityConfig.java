@@ -41,10 +41,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers( "/api/demandes/interventions/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/demandes/devis/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/demandes/devis/**").permitAll()
                         .requestMatchers("/api/centres/**").permitAll()
                         .requestMatchers("/api/users/**").permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

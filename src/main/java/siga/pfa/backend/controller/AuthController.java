@@ -12,6 +12,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import siga.pfa.backend.dto.UserResponseDTO;
 import siga.pfa.backend.entity.Role;
 import siga.pfa.backend.entity.Role.RoleName;
 import siga.pfa.backend.entity.User;
@@ -21,10 +23,13 @@ import siga.pfa.backend.security.JwtUtils;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = "http://localhost:4200")
 public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
@@ -100,10 +105,11 @@ public class AuthController {
             // Fetch user to include additional details
             User user = userRepository.findByEmail(userDetails.getUsername())
                     .orElseThrow(() -> new IllegalStateException("User not found after authentication"));
+            UserResponseDTO userResponse = new UserResponseDTO(user);
 
             Map<String, Object> data = new HashMap<>();
             data.put("token", token);
-            data.put("user",user);
+            data.put("user",userResponse);
             if (!user.getRoles().isEmpty()) {
                 data.put("role", user.getRoles().iterator().next().getName().name());
             }

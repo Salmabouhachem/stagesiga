@@ -14,6 +14,9 @@ public class DemandeService {
     public DemandeService(DemandeBranchementRepository demandeRepo) {
         this.demandeRepo = demandeRepo;
     }
+    public DemandeBranchement addDemandeBranchement(DemandeBranchement demandeBranchement){
+        return demandeRepo.save(demandeBranchement);
+    }
     
     public List<DemandeBranchement> getAllDemandes() {
         return demandeRepo.findAll();

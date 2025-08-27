@@ -41,6 +41,7 @@ public class DemandeBranchement {
     private NatureClient natureClient;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "usage_type")
     private Usage usage;
 
     public enum DemandeStatus {

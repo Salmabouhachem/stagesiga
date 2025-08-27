@@ -9,7 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/quotes")
-@CrossOrigin(origins = "http://localhost:64095")
+@CrossOrigin(origins = "http://localhost:4200")
 public class QuoteController {
     private final QuoteService quoteService;
 

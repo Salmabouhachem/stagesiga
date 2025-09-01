@@ -1,5 +1,6 @@
 package siga.pfa.backend.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -144,4 +145,14 @@ public class AuthController {
 
     public record ResponseDTO(String status, String message, Map<String, Object> data) {
     }
+    @PostMapping("/logout")
+public ResponseEntity<?> logout(HttpServletRequest request) {
+    String authHeader = request.getHeader("Authorization");
+    if (authHeader != null && authHeader.startsWith("Bearer ")) {
+        String token = authHeader.substring(7);
+        // Ajouter le token dans une blacklist (Redis, DB, in-memory, etc.)
+    }
+    return ResponseEntity.ok().build();
+}
+
 }

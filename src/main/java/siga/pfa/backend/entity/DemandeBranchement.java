@@ -61,4 +61,10 @@ public class DemandeBranchement {
         INDUSTRIEL,
         AGRICOLE
     }
+   // Association avec centre
+    @ManyToOne
+    @JoinColumn(name = "centre_id")
+    private Centre centre;
+
+
 }

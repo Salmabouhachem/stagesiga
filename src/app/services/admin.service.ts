@@ -2,10 +2,29 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { User } from '../model/user.model';
+interface DemandeBranchement {
+  id: number;
+  client: string;
+  date: string;
+  status: 'new' | 'in-progress' | 'completed';
+  description: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  cin: string;
+  telephone: string;
+  adresse: string;
+  latitude: string;
+  longitude: string;
+  natureClient: string;
+  usage: string;
+}
+
 
 @Injectable({
   providedIn: 'root'
 })
+
 export class AdminService {
   private apiUrl = 'http://localhost:8080/api';
 
@@ -45,4 +64,13 @@ normalizeUser(user: any): User {
     name: user.nom || user.name // Optionnel pour rétrocompatibilité
   };
 }
+// admin.service.ts
+getAllDemandes() {
+  return this.http.get<DemandeBranchement[]>(`http://localhost:8080/api/demandes/interventions`);
+}
+
+getAllDevis() {
+  return this.http.get<any[]>(`http://localhost:8080/api/devis`);
+}
+
 }

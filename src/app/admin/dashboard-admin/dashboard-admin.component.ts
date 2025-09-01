@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { AdminService } from '../../services/admin.service';
 import { User } from '../../model/user.model';
+import { HttpErrorResponse } from '@angular/common/http';
 
 interface DemandeBranchement {
   id: number;
@@ -31,11 +32,14 @@ interface Request {
 
 interface Quote {
   id: number;
-  client: string;
+  client: string;           // fallback
+  clientName?: string;      // pour compatibilité avec backend
   date: string;
-  status: 'pending' | 'processed' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected';
   description: string;
+  amount: number;           // ajouté
 }
+
 
 interface AppData {
   users: { [email: string]: User };
@@ -53,7 +57,7 @@ export class AdminDashboardComponent implements OnInit {
   users: User[] = [];
   stats: any = {};
   centres: any[] = [];
-  currentView: 'dashboard' | 'stats' | 'centres' | 'users' = 'dashboard';
+  currentView: 'dashboard' | 'stats' | 'centres' | 'users' | 'demandes' | 'devis' = 'dashboard';
   adminName = '';
   requests: Request[] = [];
   quotes: Quote[] = [];
@@ -61,6 +65,7 @@ export class AdminDashboardComponent implements OnInit {
   todayRequests = 0;
   pendingQuotes = 0;
   completedDemandes = 0;
+  router: any;
 
   constructor(private adminService: AdminService, private authService: AuthService) {}
 
@@ -71,6 +76,23 @@ export class AdminDashboardComponent implements OnInit {
     this.loadCentres();
     this.loadUsers();
   }
+  selectedDemande: DemandeBranchement | null = null;
+  selectedQuote: any = null;
+
+
+  viewQuote(quote: any): void {
+  this.selectedQuote = quote;
+}
+
+closeQuoteDetails(): void {
+  this.selectedQuote = null;
+}
+
+
+selectDemande(demande: DemandeBranchement): void {
+  this.selectedDemande = demande;
+}
+
 
   loadStats(): void {
     this.adminService.getStats().subscribe(data => {
@@ -83,7 +105,7 @@ export class AdminDashboardComponent implements OnInit {
       this.centres = data;
     });
   }
-
+  
   loadUsers(): void {
     this.adminService.getUsers().subscribe(apiUsers => {
       this.users = apiUsers.map(user => ({
@@ -96,9 +118,9 @@ export class AdminDashboardComponent implements OnInit {
     });
   }
 
-  changeView(view: 'dashboard' | 'stats' | 'centres' | 'users'): void {
-    this.currentView = view;
-  }
+  changeView(view: 'dashboard' | 'stats' | 'centres' | 'users' | 'demandes' | 'devis'): void {
+  this.currentView = view;
+}
 
   private loadAdminName(): void {
     this.authService.getCurrentUser().subscribe({
@@ -118,26 +140,43 @@ export class AdminDashboardComponent implements OnInit {
     });
   }
 
-  private loadRealData(): void {
-    const rawData = localStorage.getItem('appData');
-    if (!rawData) {
-      console.warn('Aucune donnée trouvée dans localStorage');
-      return;
-    }
-    const appData: AppData = JSON.parse(rawData);
+private loadRealData(): void {
+  // Charger toutes les demandes
+  this.adminService.getAllDemandes().subscribe({
+    next: (demandes) => {
+      this.demandes = demandes;
+      this.completedDemandes = this.demandes.filter(d => d.status === 'completed').length;
+    },
+    error: (err) => console.error('Erreur chargement demandes', err)
+  });
 
-    this.requests = [...appData.requests]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    this.quotes = [...appData.quotes].filter(quote => quote.status === 'pending');
-    this.demandes = [...appData.demandes];
+  // Charger tous les devis
+  this.adminService.getAllDevis().subscribe({
+    next: (quotes) => {
+      this.quotes = quotes;
+      this.pendingQuotes = this.quotes.filter(q => q.status === 'pending').length;
+    },
+    error: (err) => console.error('Erreur chargement devis', err)
+  });
+}
 
-    const today = new Date().toISOString().split('T')[0];
-    this.todayRequests = appData.requests.filter(req => req.date === today).length;
-    this.pendingQuotes = appData.quotes.filter(quote => quote.status === 'pending').length;
-    this.completedDemandes = appData.demandes.filter(demande => demande.status === 'completed').length;
+
+
+   logout(): void {
+    this.authService.logout().subscribe({
+      next: () => this.router.navigate(['/login']),
+      error: (err: HttpErrorResponse) => this.handleError(err, 'Déconnexion')
+    });
   }
-
-  logout(): void {
-    this.authService.logout();
+  handleError(err: HttpErrorResponse, arg1: string): void {
+    throw new Error('Method not implemented.');
   }
+  viewDemande(demande: DemandeBranchement): void {
+  console.log("Voir demande :", demande);
+  alert(`Détails de la demande #${demande.id}\nClient: ${demande.nom} ${demande.prenom}`);
+  // 👉 Tu peux ouvrir un modal ou une page détails ici
+}
+
+
+
 }

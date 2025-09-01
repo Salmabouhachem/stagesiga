@@ -32,12 +32,10 @@
           <h3>Demandes en attente</h3>
           <p>{{ pendingRequests }}</p>
         </div>
-        
         <div class="stat-card">
           <h3>Devis à créer</h3>
           <p>{{ quotesToCreate }}</p>
         </div>
-        
         <div class="stat-card">
           <h3>Demandes traitées</h3>
           <p>{{ completedRequests }}</p>
@@ -125,7 +123,9 @@
                 <button (click)="viewRequestDetails(request)" class="btn-action">
                   <i class="fas fa-eye"></i> Voir
                 </button>
-                <button *ngIf="request.status === 'new'" (click)="startProcessingRequest(request)" class="btn-action">
+                <button *ngIf="request.status === 'new'" 
+                        (click)="startProcessingRequest(request)" 
+                        class="btn-action">
                   <i class="fas fa-play"></i> Traiter
                 </button>
               </td>
@@ -271,76 +271,65 @@
       </ng-template>
     </section>
 
-    <!-- Création/Édition de devis -->
-    <section *ngIf="currentSection === 'quote-editor'">
-      <div class="header-actions">
-        <button (click)="currentSection = 'devis'">
-          <i class="fas fa-arrow-left"></i> Retour
+   <!-- Création/Édition de devis -->
+<section *ngIf="currentSection === 'quote-editor'">
+  <div class="header-actions">
+    <button (click)="currentSection = 'devis'">
+      <i class="fas fa-arrow-left"></i> Retour
+    </button>
+    <h2>{{ isEditingQuote ? 'Modifier' : 'Créer' }} un devis</h2>
+  </div>
+
+  <div class="quote-editor-container">
+    <form (ngSubmit)="saveQuote()">
+      <div class="form-section">
+        <h3><i class="fas fa-list"></i> Informations du devis de branchement</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Demande *</label>
+            <select [(ngModel)]="currentQuote.requestId" name="requestId" required>
+              <option *ngFor="let request of requestsForQuotes" [value]="request.id">
+                #{{ request.id }} - {{ request.clientName }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Diamètre de branchement *</label>
+            <input type="text" [(ngModel)]="currentQuote.diametreBranchement" name="diametreBranchement" required />
+          </div>
+
+          <div class="form-group">
+            <label>Calibre de compteur *</label>
+            <input type="text" [(ngModel)]="currentQuote.calibreCompteur" name="calibreCompteur" required />
+          </div>
+
+          <!-- ✅ Nouveau champ Montant -->
+          <div class="form-group">
+            <label>Montant (TND) *</label>
+            <input type="number" step="0.01" [(ngModel)]="currentQuote.amount" name="amount" required />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3><i class="fas fa-list"></i> Détails du devis</h3>
+        <div class="form-group">
+          <label>Description *</label>
+          <textarea [(ngModel)]="currentQuote.description" name="description" required rows="4"></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save"></i> Enregistrer
         </button>
-        <h2>{{ isEditingQuote ? 'Modifier' : 'Créer' }} un devis</h2>
+        <button type="button" (click)="cancelQuoteEdit()" class="btn btn-secondary">
+          <i class="fas fa-times"></i> Annuler
+        </button>
       </div>
-
-      <div class="quote-editor-container">
-        <form (ngSubmit)="saveQuote()">
-          <div class="form-section">
-             <div class="form-section">
-      <h3><i class="fas fa-list"></i> Informations du devis de branchement</h3>
-
-      
-        
-         <div class="form-row">
-              <div class="form-group">
-                <label>Articles de branchement *</label>
-                <select [(ngModel)]="currentQuote.requestId" name="requestId" required>
-                  <option *ngFor="let request of requestsForQuotes" [value]="request.id">
-                    #{{ request.id }} - {{ request.clientName }}
-                  </option>
-                </select>
-              </div>
-      <div class="form-group">
-        <label>Diamètre de branchement *</label>
-        <input type="text" [(ngModel)]="currentQuote.diametreBranchement" name="diametreBranchement" required />
-      </div>
-
-      <div class="form-group">
-        <label>Calibre de compteur *</label>
-        <input type="text" [(ngModel)]="currentQuote.calibreCompteur" name="calibreCompteur" required />
-      </div>
-    </div>
-            
-              
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label>Montant *</label>
-                <input type="number" step="0.01" [(ngModel)]="currentQuote.amount" name="amount" required>
-              </div>
-              <div class="form-group">
-                <label>Date *</label>
-                <input type="date" [(ngModel)]="currentQuote.date" name="date" required>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-section">
-            <h3><i class="fas fa-list"></i> Détails du devis</h3>
-            <div class="form-group">
-              <label>Description *</label>
-              <textarea [(ngModel)]="currentQuote.description" name="description" required rows="4"></textarea>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-save"></i> Enregistrer
-            </button>
-            <button type="button" (click)="cancelQuoteEdit()" class="btn btn-secondary">
-              <i class="fas fa-times"></i> Annuler
-            </button>
-          </div>
-        </form>
-      </div>
-    </section>
+    </form>
+  </div>
+</section>
   </div>
 </div>

@@ -65,3 +65,96 @@
   margin-bottom: 5px;
   border-radius: 5px;
 }
+/* Container général */
+.admin-content {
+  padding: 20px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
+}
+
+/* Titres */
+h2 {
+  margin-bottom: 20px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* Table générale */
+.table-container {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+/* Header bleu */
+thead {
+  background-color: #3498db;
+  color: #fff;
+  text-align: left;
+}
+
+thead th {
+  padding: 12px 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Lignes */
+tbody tr {
+  border-bottom: 1px solid #eaeaea;
+  transition: background-color 0.2s;
+}
+
+tbody tr:hover {
+  background-color: #f0f8ff; /* effet hover */
+}
+
+tbody td {
+  padding: 12px 16px;
+  color: #333;
+}
+
+/* Badge statut */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge.draft {
+  background-color: #f39c12;
+  color: white;
+}
+
+.status-badge.approved {
+  background-color: #27ae60;
+  color: white;
+}
+
+.status-badge.rejected {
+  background-color: #e74c3c;
+  color: white;
+}
+
+/* Actions */
+.btn-action {
+  color: #3498db;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-action:hover {
+  text-decoration: underline;
+}

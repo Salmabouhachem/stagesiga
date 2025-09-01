@@ -2,25 +2,17 @@
   <!-- Sidebar -->
   <div class="sidebar">
     <div class="logo">Admin Panel</div>
-    <nav>
-      <ul>
-        <li [class.active]="currentView === 'dashboard'" (click)="changeView('dashboard')">
-          <i class="fas fa-tachometer-alt"></i> Tableau de bord
-        </li>
-        <li [class.active]="currentView === 'stats'" (click)="changeView('stats')">
-          <i class="fas fa-chart-bar"></i> Statistiques
-        </li>
-        <li [class.active]="currentView === 'centres'" (click)="changeView('centres')">
-          <i class="fas fa-building"></i> Centres
-        </li>
-        <li [class.active]="currentView === 'users'" (click)="changeView('users')">
-          <i class="fas fa-users"></i> Utilisateurs
-        </li>
-        <li class="logout" (click)="logout()">
-          <i class="fas fa-sign-out-alt"></i> Déconnexion
-        </li>
-      </ul>
-    </nav>
+<nav>
+  <ul>
+    <li (click)="changeView('dashboard')">Dashboard</li>
+    <li (click)="changeView('demandes')">Demandes</li>
+    <li (click)="changeView('devis')">Devis</li>
+    <li (click)="changeView('users')">Utilisateurs</li>
+    <li (click)="changeView('centres')">Centres</li>
+    <li (click)="logout()">Déconnexion</li>
+  </ul>
+</nav>
+
   </div>
 
   <!-- Main Content -->
@@ -79,5 +71,96 @@
     <div *ngIf="currentView === 'users'" class="users-view">
       <app-users-list [users]="users"></app-users-list>
     </div>
+    <!-- Section Demandes -->
+<!-- Table des demandes -->
+<section *ngIf="currentView === 'demandes'" class="admin-content">
+  <h2>Toutes les demandes</h2>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Référence</th>
+          <th>Client</th>
+          <th>Date</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let demande of demandes">
+          <td>#{{ demande.id }}</td>
+          <td>{{ demande.nom }} {{ demande.prenom }}</td>
+          <td>{{ demande.date | date:'dd/MM/yyyy' }}</td>
+          <td>
+            <span class="status-badge" [ngClass]="demande.status">{{ demande.status }}</span>
+          </td>
+          <td>
+            <button class="btn-action" (click)="selectDemande(demande)">Voir</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
-</div>
+
+  <!-- Fiche détails -->
+  <div *ngIf="selectedDemande" class="details-card">
+    <h3>Détails de la demande #{{ selectedDemande.id }}</h3>
+    <p><strong>Client:</strong> {{ selectedDemande.nom }} {{ selectedDemande.prenom }}</p>
+    <p><strong>Email:</strong> {{ selectedDemande.email }}</p>
+    <p><strong>Téléphone:</strong> {{ selectedDemande.telephone }}</p>
+    <p><strong>Adresse:</strong> {{ selectedDemande.adresse }}</p>
+    <p><strong>Description:</strong> {{ selectedDemande.description }}</p>
+    <button class="btn-close" (click)="selectedDemande = null">Fermer</button>
+  </div>
+</section>
+
+
+<!-- Section Devis -->
+<section *ngIf="currentView === 'devis'" class="admin-content">
+  <h2>Tous les devis</h2>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Réf</th>
+          <th>Client</th>
+          <th>Montant</th>
+          <th>Date</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let quote of quotes">
+          <td>#{{ quote.id }}</td>
+          <td>{{ quote.clientName || quote.client }}</td>
+          <td>{{ quote.amount | currency:'EUR':'symbol':'1.2-2' }}</td>
+          <td>{{ quote.date | date:'dd/MM/yyyy' }}</td>
+          <td>
+            <span class="status-badge" [ngClass]="quote.status">
+              {{ quote.status }}
+            </span>
+          </td>
+          <td>
+            <button class="btn-action" (click)="viewQuote(quote)">
+              Voir
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Fiche détails -->
+  <div *ngIf="selectedQuote" class="details-card">
+    <h3>Détails du devis #{{ selectedQuote.id }}</h3>
+
+    <p><strong>Client:</strong> {{ selectedQuote.clientName || selectedQuote.client }}</p>
+    <p><strong>Date:</strong> {{ selectedQuote.date | date:'dd/MM/yyyy' }}</p>
+    <p><strong>Montant:</strong> {{ selectedQuote.amount | currency:'EUR':'symbol':'1.2-2' }}</p>
+    <p><strong>Statut:</strong> {{ selectedQuote.status }}</p>
+    <p><strong>Description:</strong> {{ selectedQuote.description || 'Aucune description' }}</p>
+
+    <button class="btn-close" (click)="closeQuoteDetails()">Fermer</button>
+  </div>
+</section>
